@@ -1,0 +1,10 @@
+(defwidget device_monitor []
+  (box :class "device-monitor-widget"
+       :orientation "v"
+       :spacing "5px"
+       :space-evenly false
+       (for-each [device (str "sh" " -c" " \"~/.config/eww/scripts/device_scanner.sh\"")]
+         (box :orientation "h" :spacing "5px"
+              (label :text (str (first (str-split ":" device))) :class "device-type")
+              (label :text (str (second (str-split ":" device))) :class "device-name")
+              (label :text (str "(" (last (str-split ":" device)) ")") :class "device-mac"))))))

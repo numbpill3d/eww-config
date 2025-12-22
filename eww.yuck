@@ -1,0 +1,203 @@
+;; ====================================
+;; CYBERPUNK DASHBOARD - ENHANCED DATA
+;; ====================================
+
+;; System Stats
+(defpoll time :interval "1s" "date '+%H:%M:%S'")
+(defpoll date :interval "60s" "date '+%Y-%m-%d'")
+(defpoll cpu_usage :interval "2s" "scripts/get_cpu.sh")
+(defpoll mem_usage :interval "2s" "scripts/get_mem.sh")
+(defpoll disk_usage :interval "30s" "scripts/get_disk.sh")
+(defpoll network_status :interval "5s" "scripts/get_network.sh")
+
+;; Enhanced Visual Data
+(deflisten code_rain_data :initial "0x0000" "scripts/code_rain_animate.sh")
+(defpoll cpu_bars :interval "3s" "scripts/cpu_bars.sh")
+(defpoll mem_visual :interval "5s" "scripts/mem_visual.sh")
+(defpoll disk_io :interval "3s" "scripts/disk_io.sh")
+(defpoll net_bandwidth :interval "2s" "scripts/net_bandwidth.sh")
+
+;; Activity
+(defpoll git_activity :interval "60s" "scripts/check_git_activity.sh")
+(defpoll system_events :interval "10s" "scripts/check_system_events.sh")
+(defpoll uptime_info :interval "60s" "uptime -p | cut -d' ' -f2-")
+(defpoll process_count :interval "5s" "ps aux | wc -l")
+(defpoll load_avg :interval "5s" "cat /proc/loadavg | cut -d' ' -f1")
+
+;; Network Radar
+(defpoll network_scan :interval "30s" "scripts/network_radar.sh")
+(defpoll device_count :interval "30s" "scripts/network_radar.sh count")
+(defpoll radar_sweep :interval "1s" "scripts/radar_animation.sh")
+
+;; ====================================
+;; MARQUEE BAR
+;; ====================================
+(defwidget cyberpunk_marquee []
+  (box :class "cyber-marquee" :orientation "h" :space-evenly false :style "background-color: #000000; border-bottom: 3px solid #ff0000; padding: 10px 40px;"
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
+    (label :text "${time}" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 4px; margin: 0 25px;")
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
+    (label :text "CPU:${cpu_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
+    (label :text "MEM:${mem_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
+    (label :text "DISK:${disk_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
+    (label :text "${network_status}" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
+    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")))
+
+;; ====================================
+;; ENHANCED CPU MODULE
+;; ====================================
+(defwidget cpu_module []
+  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "◢ CPU CORES ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
+    (box :orientation "h" :space-evenly false
+      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
+      (progress :value cpu_usage :class "cyber-bar" :style "min-width: 120px;")
+      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
+    (label :text "${cpu_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
+    (label :text "${cpu_bars}" :wrap true :style "color: #ff0000; font-size: 7px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.2;")))
+
+;; ====================================
+;; ENHANCED MEMORY MODULE
+;; ====================================
+(defwidget mem_module []
+  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "◢ MEMORY ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
+    (box :orientation "h" :space-evenly false
+      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
+      (progress :value mem_usage :class "cyber-bar" :style "min-width: 120px;")
+      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
+    (label :text "${mem_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
+    (label :text "${mem_visual}" :wrap true :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.4;")))
+
+;; ====================================
+;; ENHANCED DISK MODULE
+;; ====================================
+(defwidget disk_module []
+  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "◢ STORAGE I/O ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
+    (box :orientation "h" :space-evenly false
+      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
+      (progress :value disk_usage :class "cyber-bar" :style "min-width: 120px;")
+      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
+    (label :text "${disk_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
+    (label :text "${disk_io}" :wrap true :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.4;")))
+
+;; ====================================
+;; ENHANCED NETWORK MODULE
+;; ====================================
+(defwidget net_module []
+  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "◢ BANDWIDTH ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
+    (label :text "${network_status}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 10px #ff0000; letter-spacing: 1px; line-height: 1.4; text-align: center;")
+    (label :text "${net_bandwidth}" :wrap true :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.5; margin-top: 5px;")))
+
+;; ====================================
+;; SYSTEM INFO MODULE
+;; ====================================
+(defwidget sysinfo_module []
+  (box :orientation "v" :space-evenly false :spacing 4 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "▓ SYSTEM ▓" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
+    (label :text "UP: ${uptime_info}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")
+    (label :text "PROC: ${process_count}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")
+    (label :text "LOAD: ${load_avg}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")
+    (label :text "${date}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")))
+
+;; ====================================
+;; ACTIVITY MODULE
+;; ====================================
+(defwidget activity_module []
+  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
+    (label :text "▓ ACTIVITY ▓" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
+    (label :text "${git_activity}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")
+    (label :text "${system_events}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")))
+
+;; ====================================
+;; ENHANCED NETWORK RADAR
+;; ====================================
+(defwidget radar_module []
+  (box :orientation "v" :space-evenly false :spacing 6 :style "background-color: rgba(0, 0, 0, 0.98); border: 4px solid #ff0000; padding: 15px; box-shadow: 0 0 50px rgba(255, 0, 0, 0.95);"
+    (box :orientation "h" :space-evenly false :style "border-bottom: 3px solid #ff0000; padding-bottom: 8px; margin-bottom: 10px;"
+      (label :text "◢◣ NETWORK RADAR ◢◣" :style "color: #ff0000; font-size: 14px; font-weight: bold; text-shadow: 0 0 20px #ff0000; letter-spacing: 3px;"))
+    (box :orientation "h" :space-evenly false :style "margin-bottom: 8px;"
+      (label :text "${radar_sweep}" :style "color: #ff0000; font-size: 10px; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
+      (label :text "   DEVICES: ${device_count}" :style "color: #ff0000; font-size: 11px; font-weight: bold; text-shadow: 0 0 12px #ff0000; margin-left: 10px;"))
+    (box :orientation "v" :space-evenly false :style "border: 2px solid #660000; background: radial-gradient(circle, rgba(20,0,0,0.8) 0%, rgba(0,0,0,0.95) 100%); padding: 10px; margin-bottom: 10px; min-height: 80px;"
+      (label :text "●  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 20px #ff0000; text-align: center; letter-spacing: 10px;")
+      (label :text "  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 16px; text-shadow: 0 0 15px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;")
+      (label :text "●  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 12px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;")
+      (label :text "  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 12px; text-shadow: 0 0 10px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;"))
+    (box :orientation "v" :space-evenly false :style "border-top: 2px solid #660000; padding-top: 8px; max-height: 160px; overflow: auto;"
+      (label :text "${network_scan}" :wrap true :limit-width 38 :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; line-height: 1.8; letter-spacing: 0.5px; font-family: 'Courier New', monospace;"))))
+
+;; ====================================
+;; ANIMATED CODE RAIN
+;; ====================================
+(defwidget code_rain []
+  (box :orientation "v" :space-evenly false :spacing 8 
+       :style "background-color: rgba(0, 0, 0, 0.95); border: 3px solid #ff0000; padding: 15px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.7);"
+    (label :text "▓ HEX STREAM ▓" 
+           :style "color: #ff0000; font-size: 11px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center; border-bottom: 2px solid #660000; padding-bottom: 6px; margin-bottom: 6px;")
+    (label :text "${code_rain_data}" 
+           :justify "left"  ;; Keep hex values aligned
+           :wrap false      ;; Don't wrap, let the script control the lines
+           :style "color: #ff0000; font-size: 11px; text-shadow: 0 0 12px #ff0000; line-height: 1.2; letter-spacing: 2px; font-family: 'Courier New', monospace; font-weight: bold;")))
+;; ====================================
+;; WINDOWS
+;; ====================================
+
+(defwindow marquee_bar
+  :monitor 0
+  :geometry (geometry :x "0%" :y "0px" :width "100%" :height "35px" :anchor "top center")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (cyberpunk_marquee))
+
+(defwindow cpu_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "880px" :width "180px" :height "30px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (cpu_module))
+
+(defwindow mem_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "675px" :width "180px" :height "120px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (mem_module))
+
+(defwindow disk_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "500px" :width "180px" :height "120px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (disk_module))
+
+(defwindow net_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "355px" :width "180px" :height "120px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (net_module))
+
+(defwindow sysinfo_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "205px" :width "180px" :height "80px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (sysinfo_module))
+
+(defwindow activity_widget
+  :monitor 0
+  :geometry (geometry :x "25px" :y "80px" :width "140px" :height "90px" :anchor "bottom right")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (activity_module))
+
+(defwindow radar_widget
+  :monitor 0
+  :geometry (geometry :x "15px" :y "30px" :width "280px" :height "330px" :anchor "bottom left")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (radar_module))
+
+(defwindow code_rain_left
+  :monitor 0
+  :geometry (geometry :x "15px" :y "50px" :width "150px" :height "220px" :anchor "top left")
+  :stacking "bg" :windowtype "desktop" :wm-ignore true
+  (code_rain))

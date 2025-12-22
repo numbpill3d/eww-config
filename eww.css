@@ -1,0 +1,14 @@
+:root {
+  --radar-bg: #000;
+  --radar-probe: ~![50,30]#[0,255,0]~[:nth(.cycle,1,"L",0)]#90ff90;
+  --notif-bg: #000;
+  --notif-pos: bottom 10px;
+}
+@-eww-widget-radar {
+  .bssid { animation: pulse 2s infinite; }
+  .signal-probe { border-radius: 1px; background: #0ff; width: 20px; height: 2px; }
+}
+@keyframes pulse {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

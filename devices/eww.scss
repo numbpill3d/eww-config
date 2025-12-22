@@ -1,0 +1,39 @@
+.device_widget {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  border: 2px solid #ff0000;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 20px rgba(255, 0, 0, 0.3);
+}
+
+.device_list {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #ff0000;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.device_item {
+  color: #ffffff;
+  font-size: 12px;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff0000;
+  padding: 10px 0;
+}
+
+.status {
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.scanning {
+  animation: spin 2s linear infinite;
+  font-size: 20px;
+}

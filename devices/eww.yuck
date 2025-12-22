@@ -1,0 +1,79 @@
+(defwindow device_widget
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "300px" :height "200px")
+  :constraints (constraints :width 300 :height 200)
+  :stacking "bg"
+  :anchor ["top" "right"]
+  :window-type "dock"
+  :wm-class "device_widget"
+  :events (events
+    :on-scroll-up "device_scrolled_up"
+    :on-scroll-down "device_scrolled_down"
+  )
+  :boxed true
+  :background "#000000"
+  :border "#ff0000"
+  :border-width "2px"
+  :border-radius "8px"
+  :padding "15px"
+  
+  :children [
+    (box
+      :orientation "vertical"
+      :spacing 10
+      
+      :children [
+        (label
+          :text "📡 Network Monitor"
+          :class "header"
+        )
+        
+        (box
+          :orientation "horizontal"
+          :spacing 10
+          
+          :children [
+            (label
+              :text "🔄"
+              :class "scanning"
+            )
+            (label
+              :text "Scanning..."
+              :class "status"
+            )
+          ]
+        )
+        
+        (box
+          :orientation "vertical"
+          :spacing 5
+          
+          :children [
+            (label
+              :text "Devices Found:"
+              :class "status"
+            )
+            (eventbox
+              :class "device_list"
+              
+              :child (label
+                :text (var device_list "No devices found")
+                :class "device_item"
+              )
+            )
+          ]
+        )
+        
+        (label
+          :text "Last Update:"
+          :class "status"
+        )
+        
+        (label
+          :text (var last_update "Never")
+          :class "status"
+        )
+      ]
+    )
+  ]
+)

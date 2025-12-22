@@ -1,0 +1,39 @@
+<window name="device_widget" monitor="0">
+  <box>
+    <revealer transition-type="slide_right" transition-duration="300" reveal-child="true">
+      <overlay>
+        <box orientation="vertical" spacing="10" halign="fill" valign="fill">
+          <label label="📡 Network Monitor" css="font-size: 16px; font-weight: bold; color: #ff0000; padding: 10px;" halign="start"/>
+          <box orientation="horizontal" spacing="10" halign="fill">
+            <label label="🔄" css="animation: spin 2s linear infinite; font-size: 20px;" halign="start"/>
+            <label label="Scanning..." css="color: #ffffff; font-size: 12px;" halign="start"/>
+          </box>
+          <box orientation="vertical" spacing="5" halign="fill">
+            <label label="Devices Found:" css="color: #ffffff; font-size: 12px; font-weight: bold;" halign="start"/>
+            <eventbox css="background: rgba(0,0,0,0.3); border: 1px solid #ff0000; border-radius: 5px; padding: 5px;">
+              <label label="$device_list" css="color: #ffffff; font-size: 12px; padding: 5px;" halign="start" valign="start"/>
+            </eventbox>
+          </box>
+          <label label="Last Update:" css="color: #ffffff; font-size: 10px;" halign="end"/>
+          <label label="$last_update" css="color: #ffffff; font-size: 10px;" halign="end"/>
+        </box>
+      </overlay>
+    </revealer>
+  </box>
+</window>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  .device_widget {
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    border: 2px solid #ff0000;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 20px rgba(255, 0, 0, 0.3);
+  }
+</style>

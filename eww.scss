@@ -1,0 +1,27 @@
+/* Animated Progress Bars */
+.cyber-bar {
+  min-width: 120px;
+  min-height: 14px;
+}
+
+.cyber-bar trough {
+  background: rgba(20, 0, 0, 0.8);
+  border: 2px solid #660000;
+  min-height: 14px;
+}
+
+.cyber-bar progress {
+  background: linear-gradient(90deg, #ff0000 0%, #ff5555 50%, #ff0000 100%);
+  min-height: 14px;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+  animation: barPulse 2s infinite;
+}
+
+@keyframes barPulse {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(255, 0, 0, 1);
+  }
+}
