@@ -49,7 +49,7 @@ eww open-many marquee_bar cpu_widget mem_widget disk_widget net_widget sysinfo_w
 * `eww.scss`: cyberpunk styling, glow effects, and animations.
 * `scripts/`: backend logic for data collection and streams.
 
-* 
+* ![dashboard preview](Screenshot_20251221_220741.png)
 
 ### ◢ disclaimer ◣
 
