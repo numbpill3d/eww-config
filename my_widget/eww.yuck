@@ -1,0 +1,9 @@
+;; Root Eww config
+(include "my_widget.yuck")
+
+(defwindow main
+  :geometry (geometry :width 300 :height 150 :x 100 :y 100)
+  :stacking "fg"
+  :exclusive false
+  (my_widget)
+)

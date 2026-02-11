@@ -1,0 +1,8 @@
+;; Auto-generated Eww widget
+
+(defwidget my_widget []
+  (box :orientation "v" :spacing 8 :class "my_widget-container"
+    (label :text "Hello from my_widget" :class "label")
+    (button :label "Click Me" :onclick "echo Clicked!" :class "button")
+  )
+)

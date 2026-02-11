@@ -1,0 +1,15 @@
+# Digital Domain Monitoring - Crontab
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# Every 30 minutes - Git auto-backup
+*/30 * * * * ~/.config/eww/scripts/domain_watcher.sh git-backup
+
+# Every 15 minutes - System health check
+*/15 * * * * ~/.config/eww/scripts/domain_watcher.sh health-check
+
+# Every 5 minutes - Website availability
+*/5 * * * * ~/.config/eww/scripts/domain_watcher.sh website-check
+
+# Daily at midnight - Log cleanup
+0 0 * * * ~/.config/eww/scripts/domain_watcher.sh log-cleanup

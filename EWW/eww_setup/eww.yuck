@@ -1,0 +1,167 @@
+;; ====================================
+;; EWW Configuration - Digital Domain Monitor
+;; ====================================
+
+;; Variables for polling data
+(defpoll time :interval "1s"
+  "date '+%H:%M:%S'")
+
+(defpoll date :interval "60s"
+  "date '+%Y-%m-%d'")
+
+(defpoll cpu_usage :interval "2s"
+  "scripts/get_cpu.sh")
+
+(defpoll mem_usage :interval "5s"
+  "scripts/get_mem.sh")
+
+(defpoll disk_usage :interval "30s"
+  "scripts/get_disk.sh")
+
+(defpoll network_status :interval "5s"
+  "scripts/get_network.sh")
+
+(defpoll git_activity :interval "60s"
+  "scripts/check_git_activity.sh")
+
+(defpoll system_events :interval "10s"
+  "scripts/check_system_events.sh")
+
+(defpoll package_updates :interval "3600s"
+  "scripts/check_updates.sh")
+
+(defpoll new_emails :interval "300s"
+  "scripts/check_emails.sh")
+
+(defpoll website_status :interval "120s"
+  "scripts/check_websites.sh")
+
+(defpoll matrix_code :interval "2s"
+  "scripts/matrix_code.sh")
+
+(defpoll status_ticker :interval "5s"
+  "scripts/status_ticker.sh")
+
+;; ====================================
+;; Main System Monitor Widget
+;; ====================================
+(defwidget system_monitor []
+  (box :class "system-monitor" 
+       :orientation "v" 
+       :space-evenly false
+       :spacing 10
+    (box :class "header" :orientation "h" :space-evenly false
+      (label :text "[ DIGITAL DOMAIN MONITOR ]" :class "title"))
+
+;; Matrix code ticker
+    (box :class "matrix-ticker" :orientation "h"
+      (label :text ">> ${matrix_code}" :class "matrix-code"))
+    
+    ;; Time and Date
+    (box :class "time-section" :orientation "v" :spacing 5
+      (label :text "TIME: ${time}" :class "time")
+      (label :text "DATE: ${date}" :class "date"))
+    
+    ;; System Stats
+    (box :class "stats-section" :orientation "v" :spacing 5
+      (label :text "CPU: ${cpu_usage}%" :class "stat")
+      (label :text "MEM: ${mem_usage}%" :class "stat")
+      (label :text "DISK: ${disk_usage}%" :class "stat")
+      (label :text "NET: ${network_status}" :class "stat"))
+    
+    ;; Activity Monitor
+    (box :class "activity-section" :orientation "v" :spacing 5
+      (label :text "[ ACTIVITY ]" :class "section-header")
+      (label :text "${git_activity}" :class "activity" :wrap true)
+      (label :text "${system_events}" :class "activity" :wrap true))
+    
+    ;; Notifications
+    (box :class "notif-section" :orientation "v" :spacing 5
+      (label :text "[ NOTIFICATIONS ]" :class "section-header")
+      (label :text "Updates: ${package_updates}" :class "notif")
+      (label :text "Emails: ${new_emails}" :class "notif")
+      (label :text "Sites: ${website_status}" :class "notif"))))
+
+;; ====================================
+;; Compact Status Bar Widget
+;; ====================================
+(defwidget status_bar []
+  (box :class "status-bar" :orientation "h" :space-evenly false :spacing 20
+    (label :text "[${time}]" :class "status-item")
+    (label :text "CPU:${cpu_usage}%" :class "status-item")
+    (label :text "MEM:${mem_usage}%" :class "status-item")
+    (label :text "${network_status}" :class "status-item")
+    (label :text "${git_activity}" :class "status-item" :limit-width 30)))
+
+;; ====================================
+;; Git Activity Widget
+;; ====================================
+(defwidget git_watcher []
+  (box :class "git-watcher" :orientation "v" :space-evenly false :spacing 8
+    (label :text "[ GIT ACTIVITY MONITOR ]" :class "widget-title")
+    (label :text "${git_activity}" :class "git-info" :wrap true)
+    (button :onclick "scripts/open_git_gui.sh" :class "action-btn"
+      "[VIEW REPOS]")))
+
+;; ====================================
+;; Website Monitor Widget
+;; ====================================
+(defwidget website_monitor []
+  (box :class "website-monitor" :orientation "v" :space-evenly false :spacing 8
+    (label :text "[ WEBSITE STATUS ]" :class "widget-title")
+    (label :text "${website_status}" :class "site-info" :wrap true)
+    (button :onclick "scripts/check_websites.sh force" :class "action-btn"
+      "[REFRESH]")))
+
+;; ====================================
+;; Window Definitions
+;; ====================================
+(defwindow system_monitor_window
+  :monitor 0
+  :geometry (geometry :x "20px"
+                      :y "20px"
+                      :width "320px"
+                      :height "400px"
+                      :anchor "top left")
+  :stacking "bg"
+  :reserve (struts :distance "40px" :side "top")
+  :windowtype "desktop"
+  :wm-ignore true
+  (system_monitor))
+
+(defwindow status_bar_window
+  :monitor 0
+  :geometry (geometry :x "0%"
+                      :y "0px"
+                      :width "100%"
+                      :height "30px"
+                      :anchor "top center")
+  :stacking "bg"
+  :reserve (struts :distance "30px" :side "top")
+  :windowtype "desktop"
+  :wm-ignore true
+  (status_bar))
+
+(defwindow git_watcher_window
+  :monitor 0
+  :geometry (geometry :x "20px"
+                      :y "440px"
+                      :width "320px"
+                      :height "180px"
+                      :anchor "top left")
+  :stacking "bg"
+  :windowtype "desktop"
+  :wm-ignore true
+  (git_watcher))
+
+(defwindow website_monitor_window
+  :monitor 0
+  :geometry (geometry :x "-20px"
+                      :y "20px"
+                      :width "300px"
+                      :height "200px"
+                      :anchor "top right")
+  :stacking "bg"
+  :windowtype "desktop"
+  :wm-ignore true
+  (website_monitor))
