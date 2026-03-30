@@ -1,14 +1,997 @@
-:root {
-  --radar-bg: #000;
-  --radar-probe: ~![50,30]#[0,255,0]~[:nth(.cycle,1,"L",0)]#90ff90;
-  --notif-bg: #000;
-  --notif-pos: bottom 10px;
+/* ============================================================
+   EWW CSS // XENOTREK // BLACK + RED
+   ============================================================ */
+
+* {
+  font-family: "Terminus", "monospace";
+  font-size:   11px;
+  color:       #cc0000;
+  background:  transparent;
+  border:      none;
+  outline:     none;
+  margin:      0;
+  padding:     0;
 }
-@-eww-widget-radar {
-  .bssid { animation: pulse 2s infinite; }
-  .signal-probe { border-radius: 1px; background: #0ff; width: 20px; height: 2px; }
+
+.root {
+  background: #000000;
+  padding: 6px 4px;
 }
-@keyframes pulse {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+
+.panel {
+  background:    #080000;
+  border:        1px solid #2a0000;
+  border-left:   2px solid rgba(255, 0, 0, 0.35);
+  padding:       4px 6px;
+  margin-bottom: 1px;
+}
+
+.section-label {
+  font-size:      10px;
+  color:          #ff0000;
+  letter-spacing: 0.08em;
+  margin-bottom:  2px;
+  padding-bottom: 1px;
+  border-bottom:  1px solid #2a0000;
+}
+
+.stat-row {
+  background: transparent;
+}
+
+.label-dim {
+  color:     #440000;
+  font-size: 10px;
+  min-width: 48px;
+}
+
+.stat-val {
+  color: #cc0000;
+}
+
+.stat-val.accent {
+  color: #ff0000;
+}
+
+.stat-bar {
+  font-size:      9px;
+  color:          #660000;
+  font-family:    "Terminus", monospace;
+  letter-spacing: -0.5px;
+}
+
+.clock-panel {
+  border-left: 2px solid #ff0000;
+}
+
+.clock-time {
+  font-size:   16px;
+  color:       #ff0000;
+  font-family: "Terminus", monospace;
+}
+
+.clock-date {
+  font-size: 10px;
+  color:     #440000;
+}
+
+/* ---- RF RADAR ---- */
+
+.radar-canvas {
+  min-width:        152px;
+  min-height:       152px;
+  background-color: #000000;
+  background-image:
+    linear-gradient(to right, transparent 74px, #0a0000 74px, #0a0000 78px, transparent 78px),
+    linear-gradient(to bottom, transparent 74px, #0a0000 74px, #0a0000 78px, transparent 78px),
+    radial-gradient(circle at center,
+      transparent 24.3%, #180000 24.3%, #180000 25.7%, transparent 25.7%,
+      transparent 49.3%, #180000 49.3%, #180000 50.7%, transparent 50.7%,
+      transparent 74.3%, #1c0000 74.3%, #1c0000 75.7%, transparent 75.7%
+    );
+  border: 1px solid #2a0000;
+}
+
+.radar-sweep {
+  min-width:  2px;
+  min-height: 76px;
+  background: linear-gradient(to top, rgba(255, 0, 0, 0.65), transparent);
+}
+
+.radar-origin {
+  min-width:     6px;
+  min-height:    6px;
+  border-radius: 50%;
+  background:    #ff0000;
+}
+
+.radar-dot {
+  min-width:     6px;
+  min-height:    6px;
+  border-radius: 50%;
+  background:    #3a0000;
+}
+
+.radar-dot.arp                               { background: #cc0000; }
+.radar-dot.arp.reachable,
+.radar-dot.arp.delay,
+.radar-dot.arp.probe                         { background: #ff0000; animation: rf-pulse 2.5s ease-in-out infinite; }
+.radar-dot.arp.stale                         { background: #440000; }
+.radar-dot.bt                                { background: #882200; }
+.radar-dot.bt.connected                      { background: #cc3300; animation: rf-pulse 3s ease-in-out infinite; }
+
+@keyframes rf-pulse {
+  0%   { opacity: 1;   }
+  50%  { opacity: 0.2; }
+  100% { opacity: 1;   }
+}
+
+.device-row { background: transparent; }
+
+.rf-badge {
+  font-size: 9px;
+  min-width: 16px;
+  color:     #440000;
+}
+.rf-badge.arp { color: #cc0000; }
+.rf-badge.bt  { color: #883300; }
+
+.device-addr {
+  color:     #cc0000;
+  font-size: 10px;
+}
+
+.device-oui {
+  min-width: 0;
+  font-size: 9px;
+}
+
+/* ---- RF RADAR ENHANCED ---- */
+
+/* panel override — stronger left accent for the RF block */
+.rf-panel {
+  border-left: 2px solid rgba(255, 0, 0, 0.55);
+}
+
+/* tiny reload glyph — barely visible, click target only */
+.rf-scan-micro {
+  font-size:  9px;
+  color:      #280000;
+  background: transparent;
+  border:     none;
+  padding:    0;
+}
+.rf-scan-micro:hover { color: #660000; }
+
+/* spinning scan indicator — |/-\ cycle */
+.rf-spinner {
+  font-size: 9px;
+  color:     #550000;
+  min-width: 8px;
+}
+
+/* proto/unknown summary line — "a:3  b:1  !2" */
+.rf-summary {
+  font-size:    9px;
+  color:        #2a0000;
+  padding-left: 4px;
+}
+
+/* per-device container — left border highlights unknown devices */
+.rf-device {
+  background:    transparent;
+  padding:       2px 0 2px 2px;
+  border-bottom: 1px solid #0d0000;
+  border-left:   2px solid transparent;
+}
+
+/* known devices — subtle left border */
+.rf-device.rf-false { border-left-color: #1a0000; }
+
+/* unknown/new devices — bright border + opacity flash animation */
+.rf-device.rf-true {
+  border-left-color: #880000;
+  animation: rf-new-flash 2s ease-in-out infinite;
+}
+
+@keyframes rf-new-flash {
+  0%   { opacity: 1;    }
+  40%  { opacity: 0.35; }
+  60%  { opacity: 0.35; }
+  100% { opacity: 1;    }
+}
+
+/* row 1 button — invisible chrome, hover brightens all labels */
+.rf-row-btn {
+  background: transparent;
+  border:     none;
+  padding:    0;
+}
+.rf-row-btn:hover label { color: #ff2200; }
+
+/* device display name — unknown=bright red, known=readable red */
+.rf-name       { font-size: 10px; color: #cc0000; }
+.rf-name.true  { color: #ff0000; }
+.rf-name.false { color: #cc0000; }
+
+/* state label, per-state color */
+.rf-state            { font-size: 9px; color: #550000; }
+.rf-state.reachable,
+.rf-state.delay,
+.rf-state.probe      { color: #cc0000; }
+.rf-state.stale      { color: #550000; }
+.rf-state.connected  { color: #ff4400; }
+.rf-state.paired     { color: #883300; }
+
+/* signal bar — 4-char block string coloured by proximity */
+.rf-sig              { font-size: 9px; color: #330000; min-width: 24px; }
+.rf-sig.reachable,
+.rf-sig.connected    { color: #cc0000; }
+.rf-sig.delay        { color: #993300; }
+.rf-sig.probe,
+.rf-sig.paired       { color: #661100; }
+.rf-sig.stale        { color: #440000; }
+
+/* row 2: IP address — dim but actually readable */
+.rf-addr-sm { font-size: 9px; color: #770000; }
+
+/* row 2: last-octet quick-id (.123) and BT vendor */
+.rf-oui    { font-size: 9px; color: #550000; }
+.rf-vendor { font-size: 9px; color: #660000; }
+
+.rf-mark-btn {
+  font-size:  8px;
+  color:      #280000;
+  background: transparent;
+  border:     none;
+  padding:    0 2px;
+}
+.rf-mark-btn:hover { color: #880000; }
+
+/* ---- AGENT CHAT OVERLAY ---- */
+
+.agent-root {
+  background: #000000;
+  border:     2px solid #ff0000;
+}
+
+/* top bar */
+.agent-topbar {
+  background:    #0c0000;
+  padding:       5px 10px;
+  border-bottom: 1px solid #ff0000;
+}
+
+.agent-title {
+  font-size:      11px;
+  color:          #ff0000;
+  letter-spacing: 0.12em;
+}
+
+.agent-mode-label {
+  font-size: 10px;
+  color:     #880000;
+}
+
+.agent-modesw {
+  font-size:  10px;
+  color:      #880000;
+  background: transparent;
+  border:     none;
+  padding:    0 5px;
+}
+.agent-modesw:hover { color: #ff0000; }
+
+.agent-sep {
+  font-size: 10px;
+  color:     #440000;
+}
+
+.agent-status         { font-size: 10px; color: #660000; }
+.agent-status.running { color: #ff0000; }
+.agent-status.idle    { color: #880000; }
+
+.agent-clr {
+  font-size:  10px;
+  color:      #880000;
+  background: transparent;
+  border:     none;
+  padding:    0;
+}
+.agent-clr:hover { color: #ff0000; }
+
+/* settings row */
+.agent-settings {
+  background:    #070000;
+  padding:       3px 10px;
+  border-bottom: 1px solid #330000;
+}
+
+.agent-set-label {
+  font-size: 10px;
+  color:     #550000;
+}
+
+.agent-set-btn {
+  font-size:  10px;
+  color:      #770000;
+  background: transparent;
+  border:     none;
+  padding:    0 4px;
+}
+.agent-set-btn:hover { color: #cc0000; }
+
+.agent-set-active {
+  font-size: 10px;
+  color:     #aa0000;
+}
+
+/* scroll container */
+.agent-scroll {
+  background: #000000;
+}
+.agent-scroll scrollbar {
+  background: #0a0000;
+  border:     none;
+}
+.agent-scroll scrollbar slider {
+  background: #550000;
+  border:     none;
+}
+.agent-scroll scrollbar slider:hover {
+  background: #880000;
+}
+
+/* inner display box */
+.agent-screen {
+  background-color:  #000000;
+  background-image:  repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 11px,
+    rgba(255, 0, 0, 0.04) 11px,
+    rgba(255, 0, 0, 0.04) 12px
+  );
+  padding:     10px 14px;
+  border-left: 2px solid #ff0000;
+  min-height:  220px;
+}
+
+.agent-display {
+  font-size:   11px;
+  color:       #ff2222;
+  font-family: "Terminus", monospace;
+}
+
+/* input bar */
+.agent-inputbar {
+  background: #0c0000;
+  padding:    6px 10px;
+  border-top: 1px solid #ff0000;
+}
+
+.agent-prompt {
+  font-size: 14px;
+  color:     #ff0000;
+  padding:   0 6px 0 0;
+}
+
+.agent-input {
+  font-size:   11px;
+  color:       #ff0000;
+  background:  transparent;
+  border:      none;
+  font-family: "Terminus", monospace;
+}
+.agent-input:focus { color: #ff4444; }
+
+.agent-send {
+  font-size:  10px;
+  color:      #880000;
+  background: transparent;
+  border:     none;
+  padding:    0 0 0 8px;
+}
+.agent-send:hover { color: #ff0000; }
+
+/* ---- AGENT HOME VIEW ---- */
+
+.agent-matrix-wrap {
+  background: #000000;
+  padding:    4px 6px;
+}
+
+.agent-matrix-txt {
+  font-size:   10px;
+  color:       #dd0000;
+  font-family: "Terminus", monospace;
+  opacity:     0.75;
+}
+
+.agent-homebar {
+  background: #0c0000;
+  padding:    6px 10px;
+  border-top: 1px solid #ff0000;
+}
+
+.agent-navbtn {
+  font-size:  10px;
+  color:      #aa0000;
+  background: transparent;
+  border:     none;
+  padding:    0 4px 0 0;
+}
+.agent-navbtn:hover { color: #ff0000; }
+
+/* ---- AGENT BACK BUTTON / HEADER ---- */
+
+.agent-back {
+  font-size:  12px;
+  color:      #aa0000;
+  background: transparent;
+  border:     none;
+  padding:    0 10px 0 0;
+}
+.agent-back:hover { color: #ff0000; }
+
+.agent-model-sm {
+  font-size: 10px;
+  color:     #880000;
+}
+
+/* ---- AGENTS VIEW ---- */
+
+.agent-agentsview {
+  background: #000000;
+  padding:    10px 8px;
+}
+
+.agent-card {
+  background:  #080000;
+  border:      1px solid #330000;
+  border-left: 3px solid #880000;
+  padding:     8px 12px;
+}
+.agent-card:hover {
+  background:        #100000;
+  border-left-color: #ff0000;
+}
+
+.agent-card-name {
+  font-size: 11px;
+  color:     #ff2222;
+}
+
+.agent-card-desc {
+  font-size: 10px;
+  color:     #880000;
+}
+
+.agent-launch {
+  font-size:  10px;
+  color:      #aa0000;
+  background: transparent;
+  border:     none;
+  padding:    0 0 0 12px;
+}
+.agent-launch:hover { color: #ff0000; }
+
+/* ---- KEYBINDINGS OVERLAY ---- */
+
+.kb-root {
+  background: #000000;
+  padding:    8px 6px;
+  border:     1px solid #2a0000;
+}
+
+.kb-title {
+  font-size:    11px;
+  color:        #ff0000;
+  margin-bottom: 6px;
+}
+
+.kb-group {
+  font-size:   9px;
+  color:       #ff0000;
+  margin-top:  4px;
+  margin-bottom: 2px;
+}
+
+.kb-row {
+  background: transparent;
+}
+
+.kb-key {
+  font-size: 10px;
+  color:     #cc0000;
+  min-width: 140px;
+}
+
+.kb-desc {
+  font-size: 10px;
+  color:     #440000;
+}
+
+/* ---- SCAN PANEL (workspace 2) ---- */
+
+.scan-root {
+  background: #000000;
+  border:     2px solid #ff0000;
+}
+
+/* ── top bar ── */
+.scan-topbar {
+  background:    #070000;
+  padding:       4px 8px;
+  border-bottom: 1px solid #ff0000;
+}
+.scan-title {
+  font-size:      11px;
+  color:          #ff0000;
+  letter-spacing: 0.12em;
+}
+
+/* ── columns ── */
+.scan-col   { background: #000000; }
+.scan-col-l { border-right: 1px solid #2a0000; }
+
+.scan-col-header {
+  background:    #050000;
+  padding:       3px 6px;
+  border-bottom: 1px solid #2a0000;
+}
+.scan-col-title {
+  font-size:      10px;
+  color:          #ff0000;
+  letter-spacing: 0.08em;
+}
+
+/* ── scroll areas ── */
+.scan-scroll                          { background: #000000; }
+.scan-scroll scrollbar                { background: #040000; border: none; }
+.scan-scroll scrollbar slider         { background: #3a0000; border: none; }
+.scan-scroll scrollbar slider:hover   { background: #660000; }
+
+/* ── wifi rows ── */
+.scan-ap-row {
+  border-bottom: 1px solid #0a0000;
+  padding:       1px 6px 2px 6px;
+}
+
+/* signal bars coloured by level */
+.scan-wsig        { font-size: 9px; min-width: 26px; color: #2a0000; }
+.scan-wsig-4      { color: #cc0000; }
+.scan-wsig-3      { color: #993300; }
+.scan-wsig-2      { color: #661100; }
+.scan-wsig-1      { color: #440000; }
+.scan-wsig-0      { color: #1e0000; }
+
+/* security type badge */
+.scan-sec         { font-size: 9px; min-width: 34px; color: #550000; }
+.scan-sec-OPEN    { color: #cc4400; }
+.scan-sec-WPA2    { color: #770000; }
+.scan-sec-WPA3    { color: #550000; }
+.scan-sec-WPA1    { color: #993300; }
+.scan-sec-WEP     { color: #ff3300; }
+
+.scan-ssid        { font-size: 10px; color: #bb0000; }
+.scan-ssid-active { color: #ff5500; font-weight: bold; }
+.scan-sigpct      { font-size: 9px;  color: #550000; min-width: 26px; }
+.scan-bssid       { font-size: 9px;  color: #440000; }
+.scan-chan         { font-size: 9px;  color: #550000; min-width: 24px; }
+.scan-band        { font-size: 9px;  color: #330000; }
+.scan-dbm         { font-size: 9px;  color: #3a0000; }
+.scan-indent      { min-width: 26px; }
+
+/* copy button */
+.scan-cpbtn {
+  font-size:  9px;
+  color:      #220000;
+  background: transparent;
+  border:     none;
+  padding:    0 2px;
+}
+.scan-cpbtn:hover { color: #880000; }
+
+/* refresh button */
+.scan-rbtn {
+  font-size:  9px;
+  color:      #440000;
+  background: transparent;
+  border:     none;
+  padding:    0 3px;
+}
+.scan-rbtn:hover { color: #cc0000; }
+
+/* ── RF rows ── */
+.scan-rf-row {
+  border-bottom: 1px solid #0a0000;
+  padding:       1px 4px 2px 2px;
+}
+/* unknown/new = bright, animated */
+.scan-rf-row.rf-true {
+  background:  #0c0000;
+  border-left: 2px solid #cc0000;
+  animation:   rf-new-flash 1.6s ease-in-out infinite;
+}
+/* known = dim, no animation */
+.scan-rf-row.rf-false {
+  background:  #000000;
+  border-left: 2px solid #1a0000;
+}
+
+.scan-devname              { font-size: 10px; }
+.scan-devname.rf-new-true  { color: #ff3300; }
+.scan-devname.rf-new-false { color: #662200; }
+
+/* device type badge */
+.rf-dtype        { font-size: 9px; min-width: 24px; color: #330000; }
+.rf-dtype-rtr    { color: #ff6600; }
+.rf-dtype-phn    { color: #ff2288; }
+.rf-dtype-lap    { color: #22aaff; }
+.rf-dtype-iot    { color: #aa44ff; }
+.rf-dtype-tv     { color: #ffaa00; }
+.rf-dtype-spk    { color: #00ccaa; }
+.rf-dtype-kbd    { color: #88cc00; }
+.rf-dtype-unk    { color: #330000; }
+
+/* proto badge */
+.rf-badge      { font-size: 9px; min-width: 22px; }
+.rf-badge-arp  { color: #664400; }
+.rf-badge-bt   { color: #2244aa; }
+
+/* vendor label in row 2 */
+.rf-vendor { font-size: 9px; color: #3a0000; }
+
+/* +kn mark button */
+.rf-mark-btn         { font-size: 9px; background: transparent; border: none; padding: 0 2px; }
+.rf-mark-btn.rf-mark-true  { color: #882200; }
+.rf-mark-btn.rf-mark-true:hover  { color: #ff4400; }
+.rf-mark-btn.rf-mark-false { color: #220000; }
+.rf-mark-btn.rf-mark-false:hover { color: #440000; }
+
+.scan-oui { font-size: 9px; color: #440000; }
+
+/* ── row click target ── */
+.scan-row-btn {
+  background: transparent;
+  border:     none;
+  padding:    0;
+}
+.scan-row-btn:hover label { color: #ff3300; }
+
+/* ── focus panel ── */
+.scan-focus-wrap {
+  background: #030000;
+  border-top: 1px solid #ff0000;
+}
+.scan-focus-header {
+  background:    #070000;
+  padding:       3px 6px;
+  border-bottom: 1px solid #2a0000;
+}
+.scan-focus-text {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #cc0000;
+  padding:     4px 8px;
+}
+.scan-focused-key {
+  font-family: "Terminus", monospace;
+  font-size:   9px;
+  color:       #660000;
+}
+.scan-focus-actions {
+  background:    #050000;
+  border-top:    1px solid #2a0000;
+  padding:       3px 6px;
+}
+.scan-nick-label {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #660000;
+  min-width:   30px;
+}
+.scan-nick-input {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #ff2222;
+  background:  #0a0000;
+  border:      1px solid #440000;
+  padding:     1px 4px;
+  min-height:  16px;
+}
+.scan-nick-input:focus {
+  border-color: #880000;
+  color:        #ff4444;
+}
+.scan-unk-btn {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #882200;
+  background:  transparent;
+  border:      1px solid #331100;
+  padding:     1px 4px;
+}
+.scan-unk-btn:hover {
+  color:        #ff4400;
+  border-color: #882200;
+}
+
+/* ---- AGENT CHAT ENHANCEMENTS ---- */
+
+/* model selector strip */
+.agent-modelbar {
+  background:    #070000;
+  padding:       4px 10px;
+  border-bottom: 1px solid #330000;
+}
+
+.agent-modcycle {
+  font-size:  10px;
+  color:      #aa0000;
+  background: transparent;
+  border:     none;
+  padding:    0 8px 0 0;
+}
+.agent-modcycle:hover { color: #ff0000; }
+
+/* status dot — blinks red when running */
+.agent-status-dot         { font-size: 12px; color: #440000; padding: 0 4px; }
+.agent-status-dot.running { color: #ff0000; animation: agent-blink 0.8s ease-in-out infinite; }
+.agent-status-dot.idle    { color: #550000; }
+
+@keyframes agent-blink {
+  0%   { opacity: 1;   }
+  50%  { opacity: 0.15; }
+  100% { opacity: 1;   }
+}
+
+/* run state label — right side of model bar */
+.agent-runlabel         { font-size: 10px; color: #550000; }
+.agent-runlabel.running { color: #cc0000; }
+.agent-runlabel.idle    { color: #550000; }
+
+/* prompt glyph — » when running (inherits red, add pulse) */
+.agent-prompt.running { animation: agent-blink 0.8s ease-in-out infinite; }
+
+/* ---- WORKSPACE 2: CHAN + NET PANELS ---- */
+
+/* channel bars — fixed-width mono block text */
+.ws2-bars-txt {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #660000;
+
+}
+
+/* sparkline — same mono, slightly brighter */
+.ws2-spark {
+  font-family:   "Terminus", monospace;
+  font-size:     12px;
+  color:         #880000;
+  letter-spacing: 1px;
+  padding:       2px 0;
+}
+
+/* rf summary line reuse — slightly more visible in ws2 context */
+.ws2-rf-sum {
+  color:     #440000;
+  font-size: 10px;
+}
+
+/* ── SCAN PULSE STRIP (workspace 2 ambient) ─────────────────────── */
+.pulse-root {
+  background:  #030000;
+  border:      1px solid #200000;
+  border-top:  2px solid #550000;
+  padding:     4px 6px;
+}
+
+.pulse-title {
+  font-size:      10px;
+  color:          #ff0000;
+  letter-spacing: 0.08em;
+  min-width:      58px;
+}
+
+.pulse-lbl {
+  font-size:    10px;
+  color:        #440000;
+  padding-right: 2px;
+}
+
+.pulse-val {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #cc0000;
+}
+
+.pulse-spark {
+  font-family:    "Terminus", monospace;
+  font-size:      10px;
+  color:          #660000;
+  letter-spacing: 1px;
+}
+
+.pulse-arrow {
+  color:         #880000;
+  font-size:     10px;
+  padding-right: 1px;
+}
+
+.pulse-sep {
+  color: #0d0000;
+}
+
+.pulse-row {
+  border-bottom: 1px solid #150000;
+  padding-bottom: 3px;
+  margin-bottom:  3px;
+}
+
+.pulse-chan-text {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #550000;
+}
+
+.pulse-chan-scroll {
+  background: transparent;
+}
+
+/* ---- WS2 ENHANCED PANELS ---- */
+
+/* keyframes */
+@keyframes ws2-breathe {
+  0%   { opacity: 0.70; }
+  50%  { opacity: 1;    }
+  100% { opacity: 0.70; }
+}
+
+@keyframes ws2-ping-pulse {
+  0%   { opacity: 0.65; }
+  40%  { opacity: 1;    }
+  100% { opacity: 0.65; }
+}
+
+@keyframes ws2-scan-cycle {
+  0%   { opacity: 0.40; }
+  33%  { opacity: 1;    }
+  66%  { opacity: 0.55; }
+  100% { opacity: 0.40; }
+}
+
+/* header spinner in ws2 panels — slightly brighter than sidebar */
+.ws2-hdr-spinner {
+  font-size:  10px;
+  color:      #660000;
+  min-width:  10px;
+  animation:  ws2-scan-cycle 1s linear infinite;
+}
+
+/* channel bars — animated breathing so the data feels live */
+.ws2-bars-anim {
+  animation: ws2-breathe 5s ease-in-out infinite;
+}
+
+/* chan scroll — subtle scanline overlay on the container */
+.ws2-chan-scroll {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 11px,
+    rgba(255, 0, 0, 0.025) 11px,
+    rgba(255, 0, 0, 0.025) 12px
+  );
+}
+
+/* bandwidth text — brighter red, animated, block chars from net_bandwidth.sh */
+.ws2-bw-txt {
+  font-family:    "Terminus", monospace;
+  font-size:      10px;
+  color:          #990000;
+  letter-spacing: 0;
+  padding:        2px 0;
+  animation:      ws2-breathe 3s ease-in-out infinite;
+}
+
+/* ping latency value — pulsing, slightly larger */
+.ws2-ping-val {
+  color:     #ff2200;
+  font-size: 11px;
+  animation: ws2-ping-pulse 2s ease-in-out infinite;
+}
+
+/* IP/DNS values — slightly muted mono */
+.ws2-net-ip {
+  font-family: "Terminus", monospace;
+  font-size:   10px;
+  color:       #993300;
+}
+
+/* RF summary line in net panel — slightly more visible + breathing */
+.ws2-rf-live {
+  color:     #550000;
+  animation: ws2-breathe 4s ease-in-out infinite;
+}
+
+/* ---- SCAN PANEL — section headers (single-column layout) ---- */
+
+.scan-section-hdr {
+  background:    rgba(28, 0, 0, 0.55);
+  border-top:    1px solid #330000;
+  border-bottom: 1px solid #220000;
+  padding:       2px 6px;
+  margin-top:    2px;
+}
+
+/* ---- RADAR PANEL ---- */
+
+@keyframes ws2-radar-breathe {
+  0%   { opacity: 0.80; }
+  50%  { opacity: 1;    }
+  100% { opacity: 0.80; }
+}
+
+@keyframes ws2-radar-glow {
+  0%   { opacity: 0.70; }
+  45%  { opacity: 1;    }
+  100% { opacity: 0.70; }
+}
+
+.ws2-radar-panel {
+  border-left: 2px solid rgba(255, 30, 0, 0.30);
+}
+
+/* ---- TOOLTIPS ---- */
+tooltip {
+  background-color: #0a0000;
+  border:           1px solid #550000;
+  padding:          3px 7px;
+}
+tooltip * {
+  color:            #ff3300;
+  font-family:      "Terminus", monospace;
+  font-size:        10px;
+  background:       transparent;
+}
+
+/* ---- RADAR COLOR SWATCH BUTTONS ---- */
+.scan-color-row { margin-top: 2px; }
+
+.rf-cbtn {
+  min-width:  0;
+  padding:    1px 4px;
+  border:     1px solid #330000;
+  background: #0a0000;
+}
+.rf-cbtn:hover { border-color: #cc0000; }
+
+.rf-cbtn.c-red    label { color: #ff2000; }
+.rf-cbtn.c-orange label { color: #ff7700; }
+.rf-cbtn.c-yellow label { color: #ffee00; }
+.rf-cbtn.c-green  label { color: #00ff55; }
+.rf-cbtn.c-cyan   label { color: #00ccff; }
+.rf-cbtn.c-white  label { color: #ffffff; }
+.rf-cbtn.c-pink   label { color: #ff44aa; }
+
+/* Per-device color dot in scan panel rows */
+.rf-cdot          { color: #1a0000; font-size: 9px; }  /* invisible when unassigned */
+.rf-cdot.c-red    { color: #ff2000; }
+.rf-cdot.c-orange { color: #ff7700; }
+.rf-cdot.c-yellow { color: #ffee00; }
+.rf-cdot.c-green  { color: #00ff55; }
+.rf-cdot.c-cyan   { color: #00ccff; }
+.rf-cdot.c-white  { color: #ffffff; }
+.rf-cdot.c-pink   { color: #ff44aa; }
+
+/* Main radar label — monospace, sweep animates via poll */
+.ws2-radar-txt {
+  font-family:    "Terminus", monospace;
+  font-size:      10px;
+  color:          #cc2000;
+  letter-spacing: 0;
+  text-shadow:    0 0 6px rgba(255, 48, 0, 0.85), 0 0 12px rgba(255, 20, 0, 0.40);
+  animation:      ws2-radar-breathe 3s ease-in-out infinite;
 }

@@ -1,0 +1,6 @@
+{
+  "sera": {"love": 50, "respect": 50, "trust": 50, "mood": 50},
+  "vex": {"love": 20, "respect": 60, "trust": 30, "mood": 40},
+  "null": {"love": 0, "respect": 80, "trust": 90, "mood": 50},
+  "xethis": {"love": 50, "respect": 50, "trust": 50, "mood": 50}
+}

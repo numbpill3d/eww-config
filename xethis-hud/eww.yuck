@@ -1,0 +1,102 @@
+;; Xethis HUD v2 - dense, data-driven, ascii only
+
+(defwindow machine_hud
+  :monitor 0
+  :geometry (geometry :x "16px" :y "48px" :width "240px" :height "620px" :anchor "top left")
+  :stacking "bottom"
+  :windowtype "desktop"
+  :wm-ignore true
+  (machine_layout))
+
+(defwindow ghost_hud
+  :monitor 0
+  :geometry (geometry :x "268px" :y "48px" :width "240px" :height "360px" :anchor "top left")
+  :stacking "bottom"
+  :windowtype "desktop"
+  :wm-ignore true
+  (ghost_layout))
+
+(defwidget machine_layout []
+  (box :orientation "v" :space-evenly false :class "hud machine"
+    (label :text "THE MACHINE" :class "title-red")
+
+    ;; performance rows
+    (box :orientation "v" :class "grid"
+      (box :orientation "h" :space-evenly true
+        (metric :label "CPU" :value {cpu} :suffix "%" :color "red")
+        (metric :label "RAM" :value {ram} :suffix "%" :color "red"))
+      (box :orientation "h" :space-evenly true
+        (metric :label "NET↓" :value {net_down} :suffix "kb/s" :color "red")
+        (metric :label "NET↑" :value {net_up} :suffix "kb/s" :color "red")))
+
+    ;; autoblog status
+    (box :orientation "v" :class "section"
+      (label :text "autoblog_01" :class "sub-red")
+      (status_line :data {autoblog_data}))
+
+    ;; phantom status
+    (box :orientation "v" :class "section"
+      (label :text "traffic-phantom" :class "sub-red")
+      (status_line :data {phantom_data}))
+
+    ;; sites
+    (box :orientation "v" :class "section"
+      (label :text "sites" :class "sub-red")
+      (status_row :name "zerobudget" :status {site_zerobudget})
+      (status_row :name "lilithlist" :status {site_lilith})
+      (status_row :name "dr0pkit" :status {site_dropkit}))
+  )
+)
+
+(defwidget ghost_layout []
+  (box :orientation "v" :space-evenly false :class "hud ghost"
+    (label :text "THE GHOST" :class "title-purple")
+
+    (box :orientation "v" :class "grid"
+      (box :orientation "h" :space-evenly true
+        (metric :label "PING" :value {ping} :suffix "ms" :color "purple")
+        (metric :label "MEM" :value {sys_mem} :suffix "%" :color "purple"))
+      (box :orientation "h" :space-evenly true
+        (metric :label "UP" :value {sys_uptime} :suffix "min" :color "purple")
+        (metric :label "SUB" :value {sub_count} :suffix " running" :color "purple")))
+
+    (box :orientation "v" :class "section"
+      (label :text "mood" :class "sub-purple")
+      (label :text "observant (-_-)" :class "value"))
+
+    (box :orientation "v" :class "section"
+      (label :text "heartbeat" :class "sub-purple")
+      (progress :value {heartbeat == "" ? 0 : heartbeat} :class "pulse"))
+  )
+)
+
+(defwidget metric [label value suffix color]
+  (box :orientation "v" :class "metric"
+    (label :text label :class {color == "red" ? "metric-label-red" : "metric-label-purple"})
+    (progress :value {value == "" ? 0 : value} :class {color == "red" ? "bar-red" : "bar-purple"})
+    (label :text {suffix == "" ? value : value + " " + suffix} :class "metric-val")))
+
+(defwidget status_row [name status]
+  (box :orientation "h" :space-evenly true
+    (label :text name :class "label")
+    (label :text {status == "200" ? "[OK]" : "[ERR]"} :class {status == "200" ? "ok" : "err"})))
+
+(defwidget status_line [data]
+  (box :orientation "v"
+    (label :text {data} :class "label")))
+
+;; data polls
+(defpoll cpu :interval "2s" "scripts/get_cpu.sh")
+(defpoll ram :interval "4s" "scripts/get_ram.sh")
+(defpoll net_down :interval "3s" "scripts/get_net.sh | awk '{print $1}'")
+(defpoll net_up   :interval "3s" "scripts/get_net.sh | awk '{print $2}'")
+(defpoll ping :interval "5s" "scripts/get_ping.sh 8.8.8.8")
+(defpoll autoblog_data :interval "5m" "scripts/get_autoblog_status.sh")
+(defpoll phantom_data :interval "5m" "scripts/get_phantom_status.sh")
+(defpoll site_zerobudget :interval "5m" "curl -s -o /dev/null -w '%{http_code}' https://zerobudgetai.com || echo 000")
+(defpoll site_lilith :interval "5m" "curl -s -o /dev/null -w '%{http_code}' https://lilithlist.com || echo 000")
+(defpoll site_dropkit :interval "5m" "curl -s -o /dev/null -w '%{http_code}' https://dr0pkit.wordpress.com || echo 000")
+(defpoll sys_mem :interval "20s" "scripts/get_ram.sh")
+(defpoll sys_uptime :interval "30s" "awk '{print int($1/60)}' /proc/uptime")
+(defpoll sub_count :interval "15s" "scripts/get_subagents.sh")
+(defpoll heartbeat :interval "5s" "scripts/get_agent_status_score.sh")

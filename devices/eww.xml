@@ -1,4 +1,4 @@
-<window name="device_widget" monitor="0">
+<window name="device_widget" monitor="0" stacking="desktop" window-type="desktop">
   <box>
     <revealer transition-type="slide_right" transition-duration="300" reveal-child="true">
       <overlay>

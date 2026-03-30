@@ -1,0 +1,118 @@
+/* Brutalist Black and Red Theme for Surveillance Widget */
+
+$bg-dark: #1a1a1a;
+$red-accent: #ff0000;
+$text-light: #f0f0f0;
+$text-dark: #333333;
+$border-color: #666666;
+
+.surveillance-container {
+  background-color: $bg-dark;
+  border: 1px solid $red-accent;
+  color: $text-light;
+  font-family: 'Roboto Mono', monospace; // A brutalist-friendly monospace font
+  font-size: 14px;
+  padding: 10px;
+  // No border-radius for brutalist aesthetic
+}
+
+.header {
+  background-color: $red-accent;
+  color: $bg-dark;
+  padding: 15px 10px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid $text-light;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.current-time {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.stats-summary {
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.device-list {
+  padding: 5px;
+}
+
+.device-item {
+  background-color: lighten($bg-dark, 5%);
+  border: 1px solid $border-color;
+  margin-bottom: 5px;
+  padding: 10px;
+  // No border-radius for brutalist aesthetic
+}
+
+.device-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: $red-accent;
+  text-transform: uppercase;
+}
+
+.device-status-icon {
+  font-size: 16px;
+  color: $text-light;
+  margin-left: 5px;
+}
+
+.device-signal {
+  font-size: 13px;
+  color: $text-light;
+}
+
+.device-mac {
+  font-size: 11px;
+  color: $border-color;
+  margin-top: 5px;
+}
+
+/* Proximity indicators - more stark */
+.device-item.very-close {
+  border-left: 4px solid $red-accent;
+}
+
+.device-item.close {
+  border-left: 4px solid darken($red-accent, 10%);
+}
+
+.device-item.nearby {
+  border-left: 4px solid #cc3300; // A darker red/orange
+}
+
+.device-item.medium {
+  border-left: 4px solid #990000; // Even darker red
+}
+
+.device-item.far {
+  border-left: 4px solid #660000; // Deepest red
+}
+
+/* Status - known/unknown */
+.device-item.known {
+  opacity: 0.8;
+}
+
+.device-item.unknown {
+  animation: flicker 1s infinite alternate; // A more brutalist animation
+}
+
+@keyframes flicker {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}

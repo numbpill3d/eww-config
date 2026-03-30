@@ -1,203 +1,887 @@
-;; ====================================
-;; CYBERPUNK DASHBOARD - ENHANCED DATA
-;; ====================================
+;;;; ============================================================
+;;;; EWW CONFIG // XENOTREK DASHBOARD // BLACK + RED
+;;;; ============================================================
 
-;; System Stats
-(defpoll time :interval "1s" "date '+%H:%M:%S'")
-(defpoll date :interval "60s" "date '+%Y-%m-%d'")
-(defpoll cpu_usage :interval "2s" "scripts/get_cpu.sh")
-(defpoll mem_usage :interval "2s" "scripts/get_mem.sh")
-(defpoll disk_usage :interval "30s" "scripts/get_disk.sh")
-(defpoll network_status :interval "5s" "scripts/get_network.sh")
+;; ---- VARIABLES ----
+(defvar moodface "(^_^)")
+(defvar agent_input "")
+(defvar agent_mode "home")
+(defvar scan_focused_key "")
 
-;; Enhanced Visual Data
-(deflisten code_rain_data :initial "0x0000" "scripts/code_rain_animate.sh")
-(defpoll cpu_bars :interval "3s" "scripts/cpu_bars.sh")
-(defpoll mem_visual :interval "5s" "scripts/mem_visual.sh")
-(defpoll disk_io :interval "3s" "scripts/disk_io.sh")
-(defpoll net_bandwidth :interval "2s" "scripts/net_bandwidth.sh")
+;; ---- POLLS ----
+(defpoll time_val    :interval "1s"   `date '+%H:%M:%S'`)
+(defpoll date_val    :interval "60s"  `date '+%Y-%m-%d'`)
+(defpoll cpu_val     :interval "3s"   `~/.config/eww/scripts/cpu.sh`)
+(defpoll mem_val     :interval "5s"   `~/.config/eww/scripts/mem.sh`)
+(defpoll disk_val    :interval "30s"  `~/.config/eww/scripts/disk.sh`)
+(defpoll net_up      :interval "3s"   `~/.config/eww/scripts/net.sh up`)
+(defpoll net_down    :interval "3s"   `~/.config/eww/scripts/net.sh down`)
+(defpoll bat_val     :interval "30s"  `~/.config/eww/scripts/bat.sh pct`)
+(defpoll bat_status  :interval "30s"  `~/.config/eww/scripts/bat.sh status`)
+(defpoll cpu_bar     :interval "2s"   `~/.config/eww/scripts/vitals_bar.sh cpu`)
+(defpoll mem_bar     :interval "3s"   `~/.config/eww/scripts/vitals_bar.sh mem`)
+(defpoll wifi_ssid   :interval "10s"  `iwgetid -r 2>/dev/null || echo "none"`)
 
-;; Activity
-(defpoll git_activity :interval "60s" "scripts/check_git_activity.sh")
-(defpoll system_events :interval "10s" "scripts/check_system_events.sh")
-(defpoll uptime_info :interval "60s" "uptime -p | cut -d' ' -f2-")
-(defpoll process_count :interval "5s" "ps aux | wc -l")
-(defpoll load_avg :interval "5s" "cat /proc/loadavg | cut -d' ' -f1")
+;; External daemon polls (written by background Python daemons)
+(defpoll gh_commits    :interval "300s" `cat /tmp/eww_gh_commits   2>/dev/null || echo "?"`)
+(defpoll gh_streak     :interval "300s" `cat /tmp/eww_gh_streak    2>/dev/null || echo "?"`)
+(defpoll gh_repos      :interval "300s" `cat /tmp/eww_gh_repos     2>/dev/null || echo "?"`)
+(defpoll yt_subs       :interval "300s" `cat /tmp/eww_yt_subs      2>/dev/null || echo "?"`)
+(defpoll yt_views      :interval "300s" `cat /tmp/eww_yt_views     2>/dev/null || echo "?"`)
+(defpoll yt_videos     :interval "300s" `cat /tmp/eww_yt_videos    2>/dev/null || echo "?"`)
+(defpoll cc_tokens_day  :interval "60s" `cat /tmp/eww_cc_tokens_day  2>/dev/null || echo "0"`)
+(defpoll cc_tokens_week :interval "60s" `cat /tmp/eww_cc_tokens_week 2>/dev/null || echo "0"`)
+(defpoll cc_cost_day    :interval "60s" `cat /tmp/eww_cc_cost_day    2>/dev/null || echo "$0.00"`)
 
-;; Network Radar
-(defpoll network_scan :interval "30s" "scripts/network_radar.sh")
-(defpoll device_count :interval "30s" "scripts/network_radar.sh count")
-(defpoll radar_sweep :interval "1s" "scripts/radar_animation.sh")
+;; RF scan — live ARP + bluetooth, returns JSON array of device objects
+(defpoll rf_devices :interval "10s" :initial "[]"
+  `~/.config/eww/scripts/rf_live.sh 2>/dev/null || echo '[]'`)
+;; RF summary line written as side-effect by rf_live.sh (e.g. "a:3  b:1  !2")
+(defpoll rf_summary :interval "10s"
+  `cat /tmp/eww_rf_summary 2>/dev/null || echo "·"`)
+;; spinning scan indicator — cycles |/-\ every 500ms for "live" feel
+(defpoll rf_pulse :interval "500ms"
+  `~/.config/eww/scripts/rf_pulse.sh`)
 
-;; ====================================
-;; MARQUEE BAR
-;; ====================================
-(defwidget cyberpunk_marquee []
-  (box :class "cyber-marquee" :orientation "h" :space-evenly false :style "background-color: #000000; border-bottom: 3px solid #ff0000; padding: 10px 40px;"
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
-    (label :text "${time}" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 4px; margin: 0 25px;")
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
-    (label :text "CPU:${cpu_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
-    (label :text "MEM:${mem_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
-    (label :text "DISK:${disk_usage}%" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")
-    (label :text "${network_status}" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 10px #ff0000; margin: 0 25px; letter-spacing: 2px;")
-    (label :text "█" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 15px #ff0000; margin: 0 10px;")))
 
-;; ====================================
-;; ENHANCED CPU MODULE
-;; ====================================
-(defwidget cpu_module []
-  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "◢ CPU CORES ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
-    (box :orientation "h" :space-evenly false
-      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
-      (progress :value cpu_usage :class "cyber-bar" :style "min-width: 120px;")
-      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
-    (label :text "${cpu_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
-    (label :text "${cpu_bars}" :wrap true :style "color: #ff0000; font-size: 7px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.2;")))
+;; Agent polls
+(defpoll agent_display :interval "500ms" `~/.config/eww/scripts/agent_display.sh`)
+(defpoll agent_status  :interval "1s"    `cat /tmp/eww_agent_status 2>/dev/null || echo "idle"`)
+(defpoll agent_model   :interval "5s"    `cat /tmp/eww_agent_model  2>/dev/null || echo "qwen2.5:3b"`)
+(defpoll agent_matrix  :interval "500ms" `~/.config/eww/scripts/agent_matrix.sh`)
 
-;; ====================================
-;; ENHANCED MEMORY MODULE
-;; ====================================
-(defwidget mem_module []
-  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "◢ MEMORY ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
-    (box :orientation "h" :space-evenly false
-      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
-      (progress :value mem_usage :class "cyber-bar" :style "min-width: 120px;")
-      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
-    (label :text "${mem_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
-    (label :text "${mem_visual}" :wrap true :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.4;")))
+;; Second YT channel polls
+(defpoll yt2_subs   :interval "300s" `cat /tmp/eww_yt2_subs   2>/dev/null || echo "?"`)
+(defpoll yt2_views  :interval "300s" `cat /tmp/eww_yt2_views  2>/dev/null || echo "?"`)
+(defpoll yt2_videos :interval "300s" `cat /tmp/eww_yt2_videos 2>/dev/null || echo "?"`)
+(defpoll yt_title1  :interval "300s" `cat /tmp/eww_yt_title1  2>/dev/null || echo "CH1"`)
+(defpoll yt_title2  :interval "300s" `cat /tmp/eww_yt_title2  2>/dev/null || echo "CH2"`)
 
-;; ====================================
-;; ENHANCED DISK MODULE
-;; ====================================
-(defwidget disk_module []
-  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "◢ STORAGE I/O ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
-    (box :orientation "h" :space-evenly false
-      (label :text "▐" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-right: 8px;")
-      (progress :value disk_usage :class "cyber-bar" :style "min-width: 120px;")
-      (label :text "▌" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 12px #ff0000; margin-left: 8px;"))
-    (label :text "${disk_usage}%" :style "color: #ff0000; font-size: 16px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center;")
-    (label :text "${disk_io}" :wrap true :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.4;")))
+;; Workspace 2 — wifi scan (reads /tmp/eww_wifi_scan.json, written by scan on demand)
+;; [r] buttons write directly to this file; poll reads it at 5s for low latency
+(defpoll wifi_devices :interval "5s" :initial "[]"
+  `cat /tmp/eww_wifi_scan.json 2>/dev/null || echo '[]'`)
 
-;; ====================================
-;; ENHANCED NETWORK MODULE
-;; ====================================
-(defwidget net_module []
-  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "◢ BANDWIDTH ◣" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px; text-align: center;")
-    (label :text "${network_status}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 10px #ff0000; letter-spacing: 1px; line-height: 1.4; text-align: center;")
-    (label :text "${net_bandwidth}" :wrap true :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; font-family: 'Courier New', monospace; line-height: 1.5; margin-top: 5px;")))
+;; Workspace 2 — device focus detail (written by scan_focus.sh on row click)
+(defpoll scan_focus_data :interval "1s" :initial "[ click any row to inspect ]"
+  `cat /tmp/eww_scan_focus 2>/dev/null || echo "[ click any row to inspect ]"`)
 
-;; ====================================
-;; SYSTEM INFO MODULE
-;; ====================================
-(defwidget sysinfo_module []
-  (box :orientation "v" :space-evenly false :spacing 4 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "▓ SYSTEM ▓" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
-    (label :text "UP: ${uptime_info}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")
-    (label :text "PROC: ${process_count}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")
-    (label :text "LOAD: ${load_avg}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")
-    (label :text "${date}" :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000;")))
+;; Workspace 2 — ping sparkline (written by ping_daemon.sh every 3s)
+(defpoll ping_ms    :interval "4s" `cat /tmp/eww_ping_ms    2>/dev/null || echo "·"`)
+(defpoll ping_spark :interval "4s" `cat /tmp/eww_ping_spark 2>/dev/null || echo "········"`)
 
-;; ====================================
-;; ACTIVITY MODULE
-;; ====================================
-(defwidget activity_module []
-  (box :orientation "v" :space-evenly false :spacing 5 :style "background-color: rgba(0, 0, 0, 0.98); border: 3px solid #ff0000; padding: 12px; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);"
-    (label :text "▓ ACTIVITY ▓" :style "color: #ff0000; font-size: 12px; font-weight: bold; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
-    (label :text "${git_activity}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")
-    (label :text "${system_events}" :wrap true :limit-width 25 :style "color: #ff0000; font-size: 9px; text-shadow: 0 0 8px #ff0000; line-height: 1.5;")))
+;; Workspace 2 — channel congestion (written by chan_daemon.py every 15s)
+(defpoll chan_bars :interval "20s" `cat /tmp/eww_chan_bars 2>/dev/null || echo "awaiting scan"`)
 
-;; ====================================
-;; ENHANCED NETWORK RADAR
-;; ====================================
-(defwidget radar_module []
-  (box :orientation "v" :space-evenly false :spacing 6 :style "background-color: rgba(0, 0, 0, 0.98); border: 4px solid #ff0000; padding: 15px; box-shadow: 0 0 50px rgba(255, 0, 0, 0.95);"
-    (box :orientation "h" :space-evenly false :style "border-bottom: 3px solid #ff0000; padding-bottom: 8px; margin-bottom: 10px;"
-      (label :text "◢◣ NETWORK RADAR ◢◣" :style "color: #ff0000; font-size: 14px; font-weight: bold; text-shadow: 0 0 20px #ff0000; letter-spacing: 3px;"))
-    (box :orientation "h" :space-evenly false :style "margin-bottom: 8px;"
-      (label :text "${radar_sweep}" :style "color: #ff0000; font-size: 10px; text-shadow: 0 0 10px #ff0000; letter-spacing: 2px;")
-      (label :text "   DEVICES: ${device_count}" :style "color: #ff0000; font-size: 11px; font-weight: bold; text-shadow: 0 0 12px #ff0000; margin-left: 10px;"))
-    (box :orientation "v" :space-evenly false :style "border: 2px solid #660000; background: radial-gradient(circle, rgba(20,0,0,0.8) 0%, rgba(0,0,0,0.95) 100%); padding: 10px; margin-bottom: 10px; min-height: 80px;"
-      (label :text "●  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 18px; text-shadow: 0 0 20px #ff0000; text-align: center; letter-spacing: 10px;")
-      (label :text "  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 16px; text-shadow: 0 0 15px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;")
-      (label :text "●  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 14px; text-shadow: 0 0 12px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;")
-      (label :text "  ●  ●  ●  ●  ●" :style "color: #ff0000; font-size: 12px; text-shadow: 0 0 10px #ff0000; text-align: center; letter-spacing: 10px; margin-top: 5px;"))
-    (box :orientation "v" :space-evenly false :style "border-top: 2px solid #660000; padding-top: 8px; max-height: 160px; overflow: auto;"
-      (label :text "${network_scan}" :wrap true :limit-width 38 :style "color: #ff0000; font-size: 8px; text-shadow: 0 0 8px #ff0000; line-height: 1.8; letter-spacing: 0.5px; font-family: 'Courier New', monospace;"))))
+;; Workspace 2 — live bandwidth bars from /sys/class/net (real iface counters)
+(defpoll net_bw :interval "3s" :initial "DN[..........] --\nUP[..........] --"
+  `~/.config/eww/scripts/net_bandwidth.sh 2>/dev/null || echo "no data"`)
 
-;; ====================================
-;; ANIMATED CODE RAIN
-;; ====================================
-(defwidget code_rain []
-  (box :orientation "v" :space-evenly false :spacing 8 
-       :style "background-color: rgba(0, 0, 0, 0.95); border: 3px solid #ff0000; padding: 15px; box-shadow: 0 0 40px rgba(255, 0, 0, 0.7);"
-    (label :text "▓ HEX STREAM ▓" 
-           :style "color: #ff0000; font-size: 11px; font-weight: bold; text-shadow: 0 0 12px #ff0000; letter-spacing: 2px; text-align: center; border-bottom: 2px solid #660000; padding-bottom: 6px; margin-bottom: 6px;")
-    (label :text "${code_rain_data}" 
-           :justify "left"  ;; Keep hex values aligned
-           :wrap false      ;; Don't wrap, let the script control the lines
-           :style "color: #ff0000; font-size: 11px; text-shadow: 0 0 12px #ff0000; line-height: 1.2; letter-spacing: 2px; font-family: 'Courier New', monospace; font-weight: bold;")))
-;; ====================================
-;; WINDOWS
-;; ====================================
+;; Workspace 2 — DNS resolver + public IP (written by dns_probe.sh every 60s)
+(defpoll dns_server :interval "30s" `cat /tmp/eww_dns_server 2>/dev/null || echo "?"`)
+(defpoll pub_ip     :interval "60s" `cat /tmp/eww_pubip      2>/dev/null || echo "?"`)
 
-(defwindow marquee_bar
+;; Workspace 2 — ARP-only and BT-only filtered views, with colorclass merged from device_colors
+(defpoll arp_devices :interval "11s" :initial "[]"
+  `python3 ~/.config/eww/scripts/rf_filter.py arp 2>/dev/null || echo '[]'`)
+(defpoll bt_devices :interval "12s" :initial "[]"
+  `python3 ~/.config/eww/scripts/rf_filter.py bt 2>/dev/null || echo '[]'`)
+
+;; Workspace 2 — Halo-3 radar frame (500ms poll for smooth sweep)
+(defpoll radar_frame :interval "500ms" :initial "RADAR  0 contacts\n"
+  `python3 ~/.config/eww/scripts/radar_ws2.py 2>/dev/null || echo "RADAR  error"`)
+
+;; ---- WIDGETS ----
+
+;; Clock block
+(defwidget w-clock []
+  (box :class "panel clock-panel" :orientation "v" :spacing 1
+    (label :class "clock-time" :text time_val)
+    (label :class "clock-date" :text date_val)
+    (label :class "label-dim"  :text wifi_ssid)))
+
+;; System vitals
+(defwidget w-vitals []
+  (box :class "panel" :orientation "v" :spacing 2
+    (label :class "section-label" :text "[ SYS ]" :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "CPU")
+      (label :class "stat-val"  :text cpu_val))
+    (label :class "stat-bar" :text cpu_bar :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "MEM")
+      (label :class "stat-val"  :text mem_val))
+    (label :class "stat-bar" :text mem_bar :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "DSK")
+      (label :class "stat-val"  :text disk_val))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "NET")
+      (label :class "stat-val"  :text {net_up + " / " + net_down}))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "BAT")
+      (label :class "stat-val"  :text {bat_val + "% " + bat_status}))))
+
+;; RF scan — live device list with animated scan indicator, signal bars, proto badges
+(defwidget w-rf-radar []
+  (box :class "panel rf-panel" :orientation "v" :spacing 2
+    ;; header: section label + live spinner + proto/unknown summary + reload glyph
+    (box :orientation "h" :spacing 3 :valign "center"
+      (label :class "section-label" :text "[ RF ]" :halign "start")
+      (label :class "rf-spinner" :text rf_pulse)
+      (label :class "rf-summary" :hexpand true :halign "start" :text rf_summary)
+      (button :class "rf-scan-micro" :onclick "eww poll rf_devices"
+        (label :text "[r]")))
+    ;; scrollable device list — click row copies MAC to clipboard
+    (scroll :vscroll true :height 120
+      (box :orientation "v" :spacing 1
+        (for device in rf_devices
+          (box :class {"rf-device rf-" + device.new} :orientation "v" :spacing 0
+            ;; row 1: sig bars + proto + display name + short state
+            (button :class "rf-row-btn"
+                    :onclick {"wl-copy '" + device.key + "'"}
+              (box :orientation "h" :spacing 3
+                (label :class {"rf-sig " + device.state}
+                       :text {device.sig} :width 26)
+                (label :class {"rf-badge " + device.proto}
+                       :text {device.proto} :width 22)
+                (label :class {"rf-name " + device.new}
+                       :hexpand true
+                       :text {device.display}
+                       :truncate true :limit-width 14)
+                (label :class {"rf-state " + device.state}
+                       :text {device.state_s} :limit-width 5)))
+            ;; row 2: IP addr + last-octet id + mark button
+            (box :orientation "h" :spacing 3
+              (label :class "rf-addr-sm" :text {device.addr}
+                     :width 70 :truncate true :limit-width 15)
+              (label :class "rf-oui" :hexpand true
+                     :text {device.oui})
+              (button :class "rf-mark-btn"
+                      :onclick {"~/.config/eww/scripts/rf_mark.sh '" + device.key + "'"}
+                (label :text "+kn")))))))))
+
+;; GitHub stats
+(defwidget w-github []
+  (box :class "panel" :orientation "v" :spacing 3
+    (label :class "section-label" :text "[ GH: numbpill3d ]" :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "commits")
+      (label :class "stat-val accent" :text gh_commits))
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "streak")
+      (label :class "stat-val" :text {gh_streak + "d"}))
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "repos")
+      (label :class "stat-val" :text gh_repos))))
+
+;; YouTube stats
+(defwidget w-youtube []
+  (box :class "panel" :orientation "v" :spacing 3
+    (label :class "section-label" :text "[ YT: AI Explains AI ]" :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "subs")
+      (label :class "stat-val accent" :text yt_subs))
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "views")
+      (label :class "stat-val" :text yt_views))))
+
+;; Claude Code token tracker
+(defwidget w-claudecode []
+  (box :class "panel" :orientation "v" :spacing 3
+    (label :class "section-label" :text "[ CC TOKENS ]" :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "today")
+      (label :class "stat-val accent" :text cc_tokens_day))
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "week")
+      (label :class "stat-val" :text cc_tokens_week))
+    (box :class "stat-row" :orientation "h" :spacing 6
+      (label :class "label-dim" :text "cost")
+      (label :class "stat-val" :text cc_cost_day))))
+
+;; Sway keybindings reference — toggle with mod+/
+(defwidget w-keybindings []
+  (box :class "kb-root" :orientation "v" :spacing 1
+    (label :class "kb-title" :text "[ SWAY KEYS ]   mod = super" :halign "center")
+
+    (label :class "kb-group" :text "FOCUS / MOVE" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+h/j/k/l")
+      (label :class "kb-desc" :text "focus left/down/up/right"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+h/j/k/l")
+      (label :class "kb-desc" :text "move window dir"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+a")
+      (label :class "kb-desc" :text "focus parent"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+space")
+      (label :class "kb-desc" :text "toggle focus float/tile"))
+
+    (label :class "kb-group" :text "WINDOW" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+q")
+      (label :class "kb-desc" :text "kill window"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+f")
+      (label :class "kb-desc" :text "fullscreen toggle"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+space")
+      (label :class "kb-desc" :text "float toggle"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+r")
+      (label :class "kb-desc" :text "resize mode (hjkl/esc)"))
+
+    (label :class "kb-group" :text "LAYOUT" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+b / mod+v")
+      (label :class "kb-desc" :text "split horiz / vert"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+s")
+      (label :class "kb-desc" :text "stacking layout"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+w")
+      (label :class "kb-desc" :text "tabbed layout"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+e")
+      (label :class "kb-desc" :text "toggle split"))
+
+    (label :class "kb-group" :text "WORKSPACES" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+1..0")
+      (label :class "kb-desc" :text "go to workspace"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+1..0")
+      (label :class "kb-desc" :text "move win to workspace"))
+
+    (label :class "kb-group" :text "APPS" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+return")
+      (label :class "kb-desc" :text "terminal (kitty)"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+return")
+      (label :class "kb-desc" :text "float terminal"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+d")
+      (label :class "kb-desc" :text "launcher (wofi)"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+f")
+      (label :class "kb-desc" :text "firefox"))
+
+    (label :class "kb-group" :text "SYSTEM" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+r")
+      (label :class "kb-desc" :text "reload sway"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+l")
+      (label :class "kb-desc" :text "lock screen"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+e")
+      (label :class "kb-desc" :text "exit sway"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "print")
+      (label :class "kb-desc" :text "screenshot"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+print")
+      (label :class "kb-desc" :text "area screenshot"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+p")
+      (label :class "kb-desc" :text "clipboard history"))
+
+    (label :class "kb-group" :text "EWW" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+/")
+      (label :class "kb-desc" :text "toggle this window"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+a")
+      (label :class "kb-desc" :text "agent chat overlay"))))
+
+;; Sway nav quick-ref — compact sidebar panel
+(defwidget w-navkeys []
+  (box :class "panel" :orientation "v" :spacing 1
+    (label :class "section-label" :text "[ NAV ]" :halign "start")
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "hjkl" :width 46)
+      (label :class "stat-val"  :text "focus"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "sft+hjkl" :width 46)
+      (label :class "stat-val"  :text "move"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "1..0" :width 46)
+      (label :class "stat-val"  :text "ws"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "sft+1..0" :width 46)
+      (label :class "stat-val"  :text "send ws"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "q/f/r" :width 46)
+      (label :class "stat-val"  :text "kill/fs/resize"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "d/ret" :width 46)
+      (label :class "stat-val"  :text "launch/term"))
+    (box :class "kb-row" :orientation "h" :spacing 3
+      (label :class "label-dim" :text "/" :width 46)
+      (label :class "stat-val"  :text "keys ref"))))
+
+;; ---- WINDOWS ----
+
+;; LEFT SIDEBAR — clock, vitals, rf scan, nav keys
+(defwindow sidebar-left
   :monitor 0
-  :geometry (geometry :x "0%" :y "0px" :width "100%" :height "35px" :anchor "top center")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (cyberpunk_marquee))
+  :geometry (geometry :x "0px" :y "0px" :width "180px" :height "100%"
+                      :anchor "top left")
+  :stacking "bottom"
+  :exclusive true
+  :namespace "eww-sidebar"
+  (box :class "root" :orientation "v" :spacing 4 :valign "start" :halign "fill"
+    (w-clock)
+    (w-vitals)
+    (w-rf-radar)
+    (w-navkeys)))
 
-(defwindow cpu_widget
+;; RIGHT SIDEBAR — github, youtube, claude code
+(defwindow sidebar-right
   :monitor 0
-  :geometry (geometry :x "25px" :y "880px" :width "180px" :height "30px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (cpu_module))
+  :geometry (geometry :x "0px" :y "0px" :width "180px" :height "100%"
+                      :anchor "top right")
+  :stacking "bottom"
+  :exclusive true
+  :namespace "eww-sidebar-r"
+  (box :class "root" :orientation "v" :spacing 6 :valign "start" :halign "fill"
+    (w-github)
+    (w-youtube)
+    (w-claudecode)))
 
-(defwindow mem_widget
+;; KEYBINDINGS REFERENCE — centered overlay, toggled with mod+/
+(defwindow keybindings-ref
   :monitor 0
-  :geometry (geometry :x "25px" :y "675px" :width "180px" :height "120px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (mem_module))
+  :geometry (geometry :x "50%" :y "50%" :width "380px" :height "560px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable false
+  (w-keybindings))
 
-(defwindow disk_widget
-  :monitor 0
-  :geometry (geometry :x "25px" :y "500px" :width "180px" :height "120px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (disk_module))
+;; ---- AGENT WINDOWS (three separate windows, buttons swap between them) ----
 
-(defwindow net_widget
+;; HOME — matrix animation + nav buttons
+(defwindow agent-chat
   :monitor 0
-  :geometry (geometry :x "25px" :y "355px" :width "180px" :height "120px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (net_module))
+  :geometry (geometry :x "50%" :y "50%" :width "260px" :height "260px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  :namespace "eww-agent"
+  (box :class "agent-root" :orientation "v" :spacing 0
+    ;; header strip — title, status dot, model
+    (box :class "agent-topbar" :orientation "h" :spacing 0 :valign "center"
+      (label :class "agent-title" :hexpand true :text "[ XENOTREK ]" :halign "start")
+      (label :class {"agent-status-dot " + agent_status}
+             :text {agent_status == "running" ? "●" : "·"})
+      (label :class "agent-sep" :text "  ")
+      (label :class "agent-model-sm" :text agent_model))
+    ;; matrix — fill remaining space, no centering
+    (box :class "agent-matrix-wrap" :vexpand true :hexpand true
+      (label :class "agent-matrix-txt" :text agent_matrix
+             :vexpand true :hexpand true :halign "start" :valign "start"
+             :wrap false))
+    ;; nav / quick-input bar
+    (box :class "agent-homebar" :orientation "h" :spacing 0 :valign "center"
+      (button :class "agent-navbtn"
+              :onclick "eww close agent-chat; eww open agent-agents"
+        (label :text "[agents]"))
+      (label :class "agent-sep" :text " ")
+      (button :class "agent-navbtn"
+              :onclick "eww close agent-chat; eww open agent-chat-view"
+        (label :text "[chat]"))
+      (label :class "agent-prompt" :text " ›")
+      (input :class "agent-input" :value agent_input :hexpand true
+             :onaccept "eww update 'agent_input={}' && bash ~/.config/eww/scripts/agent_run.sh &"))))
 
-(defwindow sysinfo_widget
+;; CHAT — conversation display + input
+;;
+;; HEIGHT BUDGET (keep these two numbers in sync):
+;;   window :height  360px  ← geometry below
+;;   scroll :height  200px  ← inside the widget tree
+;;   GTK measures bars differently from CSS padding math.
+;;   topbar+inputbar+border measured at ~140px (original working baseline),
+;;   modelbar adds ~20px → fixed total ~160px.
+;;   formula: scroll = window(360) - fixed(160) = 200
+;;   to resize: change window height N, change scroll height by same N.
+;;
+(defwindow agent-chat-view
   :monitor 0
-  :geometry (geometry :x "25px" :y "205px" :width "180px" :height "80px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (sysinfo_module))
+  :geometry (geometry :x "50%" :y "50%" :width "460px" :height "360px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  :namespace "eww-agent"
+  (box :class "agent-root" :orientation "v" :spacing 0
+    ;; top bar — back, title, status dot, clear
+    (box :class "agent-topbar" :orientation "h" :spacing 0 :valign "center"
+      (button :class "agent-back"
+              :onclick "eww close agent-chat-view; eww open agent-chat"
+        (label :text "←"))
+      (label :class "agent-title" :hexpand true :text "[ CHAT ]" :halign "start")
+      (label :class {"agent-status-dot " + agent_status}
+             :text {agent_status == "running" ? "●" : "·"})
+      (label :class "agent-sep" :text "  ")
+      (button :class "agent-clr" :onclick "printf '' > /tmp/eww_agent_conv"
+        (label :text "clr")))
+    ;; model selector strip — click cycles installed ollama models
+    (box :class "agent-modelbar" :orientation "h" :spacing 0 :valign "center"
+      (label :class "agent-set-label" :text "mod ")
+      (button :class "agent-modcycle"
+              :onclick "bash ~/.config/eww/scripts/agent_model_cycle.sh"
+        (label :text agent_model))
+      (label :class {"agent-runlabel " + agent_status} :hexpand true :halign "end"
+             :text {agent_status == "running" ? "[ running ]" : "[ idle ]"}))
+    ;; scrollable conversation — height = window(360) - fixed-bars(160)
+    (scroll :vscroll true :height 200 :class "agent-scroll"
+      (box :class "agent-screen"
+        (label :class "agent-display" :text agent_display
+               :wrap false :halign "start" :valign "start")))
+    ;; input bar — prompt glyph changes to » when running
+    (box :class "agent-inputbar" :orientation "h" :spacing 0
+      (label :class {"agent-prompt " + agent_status}
+             :text {agent_status == "running" ? "»" : "›"})
+      (input :class "agent-input" :value agent_input :hexpand true
+             :onaccept "eww update 'agent_input={}' && bash ~/.config/eww/scripts/agent_run.sh &"))))
 
-(defwindow activity_widget
+;; AGENTS — launcher cards
+(defwindow agent-agents
   :monitor 0
-  :geometry (geometry :x "25px" :y "80px" :width "140px" :height "90px" :anchor "bottom right")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (activity_module))
+  :geometry (geometry :x "50%" :y "50%" :width "340px" :height "230px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  :namespace "eww-agent"
+  (box :class "agent-root" :orientation "v" :spacing 0
+    (box :class "agent-topbar" :orientation "h" :spacing 0 :valign "center"
+      (button :class "agent-back"
+              :onclick "eww close agent-agents; eww open agent-chat"
+        (label :text "←"))
+      (label :class "agent-title" :hexpand true :text "[ AGENTS ]" :halign "start"))
+    (box :class "agent-agentsview" :orientation "v" :spacing 5
+      (box :class "agent-card" :orientation "h" :spacing 0 :valign "center"
+        (box :orientation "v" :spacing 0 :hexpand true
+          (label :class "agent-card-name" :text "zeroclaw" :halign "start")
+          (label :class "agent-card-desc" :text "gemini 2.5 pro  //  free" :halign "start"))
+        (button :class "agent-launch"
+                :onclick "bash ~/.config/eww/scripts/launch_agent.sh zeroclaw"
+          (label :text "[open]")))
+      (box :class "agent-card" :orientation "h" :spacing 0 :valign "center"
+        (box :orientation "v" :spacing 0 :hexpand true
+          (label :class "agent-card-name" :text "goose" :halign "start")
+          (label :class "agent-card-desc" :text "block agent  //  gemini 2.5 pro" :halign "start"))
+        (button :class "agent-launch"
+                :onclick "bash ~/.config/eww/scripts/launch_agent.sh goose"
+          (label :text "[open]")))
+      (box :class "agent-card" :orientation "h" :spacing 0 :valign "center"
+        (box :orientation "v" :spacing 0 :hexpand true
+          (label :class "agent-card-name" :text "claude" :halign "start")
+          (label :class "agent-card-desc" :text "claude code  //  sonnet 4.6" :halign "start"))
+        (button :class "agent-launch"
+                :onclick "bash ~/.config/eww/scripts/launch_agent.sh claude"
+          (label :text "[open]"))))))
 
-(defwindow radar_widget
-  :monitor 0
-  :geometry (geometry :x "15px" :y "30px" :width "280px" :height "330px" :anchor "bottom left")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (radar_module))
+;; ---- SCAN PANEL (workspace 2) ----
+;;
+;; HEIGHT BUDGET: window=320  topbar=30  col-header=26  col-scroll=120  focus=24+60+24  pad=~24
+;;   30+26+120+108+24 = 308 → 320 gives 12px breathing room
+;;   to resize: change :height here AND both scroll heights below in lockstep
 
-(defwindow code_rain_left
+(defwidget w-scan-panel []
+  (box :class "scan-root" :orientation "v" :spacing 0 :valign "start" :vexpand false
+
+    ;; ── TOP BAR ──────────────────────────────────────────────────────────────
+    (box :class "scan-topbar" :orientation "h" :spacing 0 :valign "center"
+      (label :class "scan-title" :hexpand true :text "[ SCAN ]" :halign "start")
+      (label :class "rf-spinner" :text rf_pulse)
+      (label :class "agent-sep"  :text "  ")
+      (label :class "rf-summary" :text rf_summary)
+      (label :class "agent-sep"  :text "  ")
+      (button :class "scan-rbtn"
+              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json & ~/.config/eww/scripts/rf_live.sh &"
+        (label :text "[r all]")))
+
+    ;; ── WIFI NETWORKS ────────────────────────────────────────────────────────
+    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+      (label :class "scan-col-title" :hexpand true :text "[ WIFI NETWORKS ]" :halign "start")
+      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+      (label :class "agent-sep" :text " ")
+      (button :class "scan-rbtn"
+              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+        (label :text "[r]")))
+
+    (scroll :class "scan-scroll" :vscroll true :height 140
+      (box :orientation "v" :spacing 0
+        (for ap in wifi_devices
+          (box :class "scan-ap-row" :orientation "v" :spacing 0
+
+            ;; row 1: bars  sec  ssid  chan  band  signal%
+            (button :class "scan-row-btn"
+                    :tooltip {ap.ssid + "  [" + ap.security + "]\n"
+                              + ap.bssid + "  " + ap.dbm + "dBm\n"
+                              + "ch" + ap.chan + "  " + ap.band + "  " + ap.signal + "%"}
+                    :onclick {"~/.config/eww/scripts/scan_select.sh wifi '"
+                              + ap.bssid + "'"}
+              (box :orientation "h" :spacing 2
+                (label :class {"scan-wsig scan-wsig-" + ap.level}
+                       :text {ap.bars} :width 26)
+                (label :class {"scan-sec scan-sec-" + ap.security}
+                       :text {ap.security} :width 40)
+                (label :class "scan-ssid" :hexpand true
+                       :text {ap.ssid == wifi_ssid ? "* " + ap.ssid : ap.ssid}
+                       :truncate true :limit-width 22)
+                (label :class "scan-chan"
+                       :text {"ch" + ap.chan} :width 30)
+                (label :class "scan-band" :text {ap.band} :width 28)
+                (label :class "scan-sigpct"
+                       :text {ap.signal + "%"} :width 30)))
+
+            ;; row 2: bssid  dbm  [cp]
+            (box :orientation "h" :spacing 2
+              (label :class "scan-indent" :width 26 :text "")
+              (label :class "scan-bssid"
+                     :text {ap.bssid} :limit-width 18 :width 110)
+              (label :class "scan-dbm" :hexpand true
+                     :text {ap.dbm + "dBm"})
+              (button :class "scan-cpbtn"
+                      :onclick {"wl-copy '" + ap.bssid + "'"}
+                (label :text "[cp]")))))))
+
+    ;; ── ARP DEVICES ──────────────────────────────────────────────────────────
+    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+      (label :class "scan-col-title" :hexpand true :text "[ ARP DEVICES ]" :halign "start")
+      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+      (label :class "agent-sep" :text " ")
+      (button :class "scan-rbtn"
+              :onclick "~/.config/eww/scripts/rf_live.sh &"
+        (label :text "[r]")))
+
+    (scroll :class "scan-scroll" :vscroll true :height 105
+      (box :orientation "v" :spacing 0
+        (for device in arp_devices
+          (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+
+            ;; row 1: sig  dtype  display  state
+            (button :class {"scan-row-btn rf-known-" + device.new}
+                    :tooltip {device.display + "  [" + device.dtype + "]\n"
+                              + device.addr + "  " + device.mac + "\n"
+                              + device.vendor + "  state: " + device.state}
+                    :onclick {"~/.config/eww/scripts/scan_select.sh arp '"
+                              + device.key + "'"}
+              (box :orientation "h" :spacing 2
+                (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
+                (label :class {"rf-sig " + device.state}
+                       :text {device.sig} :width 26)
+                (label :class {"rf-dtype rf-dtype-" + device.dtype}
+                       :text {device.dtype} :width 28)
+                (label :class {"scan-devname rf-new-" + device.new}
+                       :hexpand true :text {device.display}
+                       :truncate true :limit-width 20)
+                (label :class {"rf-state " + device.state}
+                       :text {device.state_s} :limit-width 7 :width 40)))
+
+            ;; row 2: addr  oui/last-octet  vendor  [cp]  [+kn]
+            (box :orientation "h" :spacing 2
+              (label :class "scan-indent" :width 26 :text "")
+              (label :class "rf-addr-sm"
+                     :text {device.addr} :limit-width 15 :width 95)
+              (label :class {"rf-vendor rf-dtype-" + device.dtype}
+                     :hexpand true :text {device.vendor}
+                     :limit-width 12 :truncate true)
+              (button :class "scan-cpbtn"
+                      :onclick {"wl-copy '" + device.key + "'"}
+                (label :text "[cp]"))
+              (button :class {"rf-mark-btn rf-mark-" + device.new}
+                      :onclick {"~/.config/eww/scripts/rf_mark.sh '"
+                                + device.key + "'"}
+                (label :text "+kn")))))))
+
+    ;; ── BLUETOOTH DEVICES ────────────────────────────────────────────────────
+    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+      (label :class "scan-col-title" :hexpand true :text "[ BLUETOOTH ]" :halign "start")
+      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+
+    (scroll :class "scan-scroll" :vscroll true :height 55
+      (box :orientation "v" :spacing 0
+        (for device in bt_devices
+          (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+
+            (button :class {"scan-row-btn rf-known-" + device.new}
+                    :tooltip {device.display + "  [bt/" + device.dtype + "]\n"
+                              + device.mac + "\n"
+                              + device.vendor + "  state: " + device.state}
+                    :onclick {"~/.config/eww/scripts/scan_select.sh bt '"
+                              + device.key + "'"}
+              (box :orientation "h" :spacing 2
+                (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
+                (label :class {"rf-sig " + device.state}
+                       :text {device.sig} :width 26)
+                (label :class {"rf-badge rf-badge-bt"} :text "bt" :width 24)
+                (label :class {"rf-dtype rf-dtype-" + device.dtype}
+                       :text {device.dtype} :width 28)
+                (label :class {"scan-devname rf-new-" + device.new}
+                       :hexpand true :text {device.display}
+                       :truncate true :limit-width 22)
+                (label :class {"rf-state " + device.state}
+                       :text {device.state_s} :limit-width 6 :width 36)))
+
+            (box :orientation "h" :spacing 2
+              (label :class "scan-indent" :width 26 :text "")
+              (label :class "rf-addr-sm"
+                     :text {device.addr} :limit-width 15 :width 95)
+              (label :class {"rf-vendor rf-dtype-" + device.dtype}
+                     :hexpand true :text {device.vendor}
+                     :limit-width 14 :truncate true)
+              (button :class "scan-cpbtn"
+                      :onclick {"wl-copy '" + device.key + "'"}
+                (label :text "[cp]"))
+              (button :class {"rf-mark-btn rf-mark-" + device.new}
+                      :onclick {"~/.config/eww/scripts/rf_mark.sh '"
+                                + device.key + "'"}
+                (label :text "+kn")))))))
+
+    ;; ── FOCUS PANEL ──────────────────────────────────────────────────────────
+    (box :class "scan-focus-wrap" :orientation "v" :spacing 0
+      (box :class "scan-focus-header" :orientation "h" :spacing 3 :valign "center"
+        (label :class "scan-col-title" :hexpand true
+               :text "[ FOCUS ]" :halign "start")
+        (label :class "scan-focused-key" :text {scan_focused_key} :limit-width 20)
+        (button :class "scan-unk-btn"
+                :onclick {"~/.config/eww/scripts/rf_unmark.sh '" + scan_focused_key + "'"}
+          (label :text "[unmark]"))
+        (label :class "agent-sep" :text "  ")
+        (button :class "scan-rbtn"
+                :onclick "truncate -s 0 /tmp/eww_scan_focus"
+          (label :text "[clr]")))
+      (scroll :class "scan-scroll" :vscroll true :height 38
+        (label :class "scan-focus-text" :halign "start" :valign "start"
+               :wrap false :text scan_focus_data))
+      (box :class "scan-focus-actions" :orientation "h" :spacing 4 :valign "center"
+        (label :class "scan-nick-label" :text "nick:")
+        (input :class "scan-nick-input" :hexpand true
+               :onaccept "~/.config/eww/scripts/rf_nick_focused.sh '{}'")
+        (button :class "scan-cpbtn"
+                :onclick "~/.config/eww/scripts/rf_nick_focused.sh '-'"
+          (label :text "[clr]")))
+      ;; color assignment row — sets radar blip color for focused device
+      (box :class "scan-color-row" :orientation "h" :spacing 3 :valign "center"
+        (label :class "scan-nick-label" :text "col:")
+        (button :class "rf-cbtn c-red"    :tooltip "red"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-red"
+          (label :text "■"))
+        (button :class "rf-cbtn c-orange" :tooltip "orange"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-orange"
+          (label :text "■"))
+        (button :class "rf-cbtn c-yellow" :tooltip "yellow"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-yellow"
+          (label :text "■"))
+        (button :class "rf-cbtn c-green"  :tooltip "green"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-green"
+          (label :text "■"))
+        (button :class "rf-cbtn c-cyan"   :tooltip "cyan"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-cyan"
+          (label :text "■"))
+        (button :class "rf-cbtn c-white"  :tooltip "white"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-white"
+          (label :text "■"))
+        (button :class "rf-cbtn c-pink"   :tooltip "pink"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh c-pink"
+          (label :text "■"))
+        (button :class "scan-cpbtn"
+                :onclick "~/.config/eww/scripts/rf_color_focused.sh ''"
+          (label :text "[def]"))))))
+
+(defwindow scan-panel
   :monitor 0
-  :geometry (geometry :x "15px" :y "50px" :width "150px" :height "220px" :anchor "top left")
-  :stacking "bg" :windowtype "desktop" :wm-ignore true
-  (code_rain))
+  :geometry (geometry :x "610px" :y "30px" :width "720px" :height "530px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable true
+  (w-scan-panel))
+
+;; ---- RADAR PANEL (workspace 2, right column lower) ----
+
+(defwidget w-radar []
+  (box :class "root" :orientation "v" :spacing 0
+    (box :class "panel ws2-radar-panel" :orientation "v" :spacing 2
+
+      ;; header: title + spinning indicator + contact count
+      (box :orientation "h" :spacing 3 :valign "center"
+        (label :class "section-label" :hexpand true
+               :text "[ RADAR ]" :halign "start")
+        (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+        (label :class "agent-sep" :text " ")
+        (button :class "rf-scan-micro"
+                :onclick "~/.config/eww/scripts/rf_live.sh & ~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+          (label :text "[r]")))
+
+      ;; radar frame — updates every 500ms, plain text X blips
+      (label :class "ws2-radar-txt" :halign "start" :valign "start"
+             :wrap false :text radar_frame))))
+
+(defwindow radar-panel
+  :monitor 0
+  :geometry (geometry :x "1320px" :y "243px" :width "390px" :height "420px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable false
+  (w-radar))
+
+;; ---- PULSE STRIP (workspace 2, below scan-panel) ----
+;; shows: ping latency sparkline / live net flow / dns resolver / public ip / channel congestion
+
+(defwidget w-scan-pulse []
+  (box :class "pulse-root" :orientation "v" :spacing 0 :vexpand false
+
+    ;; ── ROW 1: network pulse ────────────────────────────────────────────────
+    (box :class "pulse-row" :orientation "h" :spacing 0 :valign "center"
+      (label :class "pulse-title" :text "[ PULSE ]")
+      (label :class "pulse-sep"   :text "  ")
+      (label :class "pulse-lbl"   :text "gw:")
+      (label :class "pulse-val"   :text ping_ms :width 36)
+      (label :class "pulse-spark" :text ping_spark)
+      (label :class "pulse-sep"   :text "   ")
+      (label :class "pulse-arrow" :text "↑")
+      (label :class "pulse-val"   :text net_up  :width 52 :halign "start")
+      (label :class "pulse-arrow" :text "↓")
+      (label :class "pulse-val"   :text net_down :hexpand true :halign "start")
+      (label :class "pulse-lbl"   :text "dns:")
+      (label :class "pulse-val"   :text dns_server :width 76)
+      (label :class "pulse-lbl"   :text "ext:")
+      (label :class "pulse-val"   :text pub_ip :width 84)
+      (button :class "scan-rbtn"
+              :onclick "~/.config/eww/scripts/dns_probe.sh &"
+        (label :text "[r]")))
+
+    ;; ── ROW 2: wifi channel congestion ──────────────────────────────────────
+    (box :class "pulse-chan-wrap" :orientation "h" :spacing 0 :valign "start"
+      (label :class "pulse-title" :text "[ CHAN ]" :valign "start")
+      (label :class "pulse-sep"   :text "  " :valign "start")
+      (scroll :class "pulse-chan-scroll" :vscroll true :hscroll false :height 78
+        (label :class "pulse-chan-text" :halign "start" :valign "start"
+               :wrap false :text chan_bars)))))
+
+(defwindow scan-pulse
+  :monitor 0
+  :geometry (geometry :x "610px" :y "568px" :width "720px" :height "80px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable false
+  (w-scan-pulse))
+
+;; ---- BONUS (defined but not in a window) ----
+
+(defwidget w-youtube-full []
+  (box :class "panel" :orientation "v" :spacing 4
+    (label :class "section-label" :text "[ YOUTUBE ]" :halign "start")
+    (label :class "label-dim" :text yt_title1)
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "subs")
+      (label :class "stat-val accent" :text yt_subs))
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "views")
+      (label :class "stat-val" :text yt_views))
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "vids")
+      (label :class "stat-val" :text yt_videos))
+    (label :class "section-label" :text "---" :halign "start")
+    (label :class "label-dim" :text yt_title2)
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "subs")
+      (label :class "stat-val accent" :text yt2_subs))
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "views")
+      (label :class "stat-val" :text yt2_views))
+    (box :class "stat-row" :orientation "h" :spacing 8
+      (label :class "label-dim" :text "vids")
+      (label :class "stat-val" :text yt2_videos))))
+
+;; ---- WORKSPACE 2 PANELS ----
+
+;; Channel congestion — groups wifi scan by channel, shows fill bars + bandwidth
+(defwidget w-chan-bars []
+  (box :class "root" :orientation "v" :spacing 0
+    (box :class "panel ws2-chan" :orientation "v" :spacing 2
+
+      ;; header: title + live spinner + reload
+      (box :orientation "h" :spacing 3 :valign "center"
+        (label :class "section-label" :text "[ CHAN ]" :hexpand true :halign "start")
+        (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+        (label :class "agent-sep" :text " ")
+        (button :class "rf-scan-micro"
+                :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+          (label :text "[r]")))
+
+      ;; channel congestion bars — scrollable so long lists don't overflow
+      (scroll :class "scan-scroll ws2-chan-scroll" :vscroll true :height 170
+        (label :class "ws2-bars-txt ws2-bars-anim" :halign "start" :valign "start"
+               :wrap false :text chan_bars))
+
+      ;; bandwidth section
+      (box :orientation "h" :spacing 3 :valign "center"
+        (label :class "section-label" :text "[ BWIDTH ]" :hexpand true :halign "start")
+        (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+
+      ;; real iface counters — DN/UP bar visualization
+      (label :class "ws2-bw-txt" :halign "start" :valign "start"
+             :wrap true :text net_bw))))
+
+;; Network panel — latency sparkline, throughput, DNS, public IP, RF summary
+(defwidget w-ping []
+  (box :class "root" :orientation "v" :spacing 0
+    (box :class "panel ws2-net" :orientation "v" :spacing 2
+
+      ;; latency
+      (box :orientation "h" :spacing 3 :valign "center"
+        (label :class "section-label" :text "[ LATENCY ]" :hexpand true :halign "start")
+        (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+      (box :class "stat-row" :orientation "h" :spacing 6
+        (label :class "label-dim" :text "gw")
+        (label :class "stat-val ws2-ping-val" :text ping_ms))
+      (label :class "ws2-spark" :halign "start" :text ping_spark)
+
+      ;; net throughput
+      (label :class "section-label" :text "[ NET ]" :halign "start")
+      (box :class "stat-row" :orientation "h" :spacing 6
+        (label :class "label-dim" :text "up")
+        (label :class "stat-val" :text net_up))
+      (box :class "stat-row" :orientation "h" :spacing 6
+        (label :class "label-dim" :text "dn")
+        (label :class "stat-val" :text net_down))
+
+      ;; dns + external ip
+      (label :class "section-label" :text "[ DNS / EXT ]" :halign "start")
+      (box :class "stat-row" :orientation "h" :spacing 6
+        (label :class "label-dim" :text "dns")
+        (label :class "stat-val ws2-net-ip" :text dns_server))
+      (box :class "stat-row" :orientation "h" :spacing 6
+        (label :class "label-dim" :text "ext")
+        (label :class "stat-val ws2-net-ip" :text pub_ip))
+
+      ;; RF device summary
+      (box :orientation "h" :spacing 3 :valign "center"
+        (label :class "section-label" :text "[ RF ]" :hexpand true :halign "start")
+        (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+      (label :class "rf-summary ws2-rf-sum ws2-rf-live" :halign "start"
+             :text rf_summary))))
+
+;; channel congestion + bandwidth — workspace 2, left column
+(defwindow chan-panel
+  :monitor 0
+  :geometry (geometry :x "190px" :y "30px" :width "400px" :height "320px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable false
+  (w-chan-bars))
+
+;; latency / net / dns / rf — workspace 2, right column upper
+(defwindow net-panel
+  :monitor 0
+  :geometry (geometry :x "1340px" :y "30px" :width "370px" :height "205px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable false
+  (w-ping))

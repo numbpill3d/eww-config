@@ -1,0 +1,130 @@
+;; Desktop Companion Widget - EWW Configuration
+;; Always-on desktop companion with emotional AI
+
+(defwindow companion
+  :monitor 0
+  :geometry (geometry 
+    :x "20px"
+    :y "50%"
+    :width "600px"
+    :height "400px"
+    :anchor "left center")
+  :stacking "bg"           ; Background layer - never overlays windows
+  :exclusive false
+  :focusable false
+  :namespace "companion"
+  
+  (box :class "companion-container" :orientation "h" :space-evenly false
+    
+    ;; Dialog Box - Left Side
+    (box :class "dialog-section" :orientation "v" :space-evenly false
+      
+      ;; Character Selector
+      (box :class "char-selector" :orientation "h" :space-evenly false
+        (button :class "char-btn ${current_char == 'sera' ? 'active' : ''}" 
+                :onclick "~/.config/eww/companion/companion.sh switch sera"
+                "SERA")
+        (button :class "char-btn ${current_char == 'vex' ? 'active' : ''}"
+                :onclick "~/.config/eww/companion/companion.sh switch vex"
+                "VEX")
+        (button :class "char-btn ${current_char == 'null' ? 'active' : ''}"
+                :onclick "~/.config/eww/companion/companion.sh switch null"
+                "NULL")
+        (button :class "char-btn ${current_char == 'xethis' ? 'active' : ''}"
+                :onclick "~/.config/eww/companion/companion.sh switch xethis"
+                "XETHIS")
+      )
+      
+      ;; Emotion Status Bar
+      (box :class "emotion-bar" :orientation "v" :space-evenly false
+        (box :class "stat-row" :orientation "h"
+          (label :class "stat-label" :text "AFFECTION:")
+          (progress :class "stat-bar affection" 
+                   :value emotion_love 
+                   :orientation "h"))
+        (box :class "stat-row" :orientation "h"
+          (label :class "stat-label" :text "RESPECT:")
+          (progress :class "stat-bar respect" 
+                   :value emotion_respect 
+                   :orientation "h"))
+        (box :class "stat-row" :orientation "h"
+          (label :class "stat-label" :text "TRUST:")
+          (progress :class "stat-bar trust" 
+                   :value emotion_trust 
+                   :orientation "h"))
+        (box :class "stat-row" :orientation "h"
+          (label :class "stat-label" :text "MOOD:")
+          (progress :class "stat-bar mood" 
+                   :value emotion_mood 
+                   :orientation "h"))
+      )
+      
+      ;; Character Name Display
+      (label :class "char-name" :text char_display_name)
+      
+      ;; Dialog Display - Scrollable
+      (scroll :vscroll true
+              :hscroll false
+        (box :class "dialog-box" :orientation "v" :space-evenly false
+          (label :class "dialog-text" 
+                 :text dialog_content
+                 :wrap true)
+        )
+      )
+      
+      ;; Input Area
+      (box :class "input-area" :orientation "h" :space-evenly false
+        (button :class "talk-btn"
+                :onclick "~/.config/eww/companion/companion.sh talk"
+                "[TALK]")
+        (button :class "gift-btn"
+                :onclick "~/.config/eww/companion/companion.sh gift"
+                "[GIFT]")
+        (button :class "ignore-btn"
+                :onclick "~/.config/eww/companion/companion.sh ignore"
+                "[IGNORE]")
+        (button :class "insult-btn"
+                :onclick "~/.config/eww/companion/companion.sh insult"
+                "[INSULT]")
+      )
+    )
+    
+    ;; ASCII Art Portrait - Right Side
+    (box :class "portrait-section" :orientation "v" :space-evenly false
+      (label :class "ascii-portrait" 
+             :text ascii_art
+             :wrap false)
+      (label :class "status-text" 
+             :text char_status
+             :wrap true)
+    )
+  )
+)
+
+;; Polling variables for live updates
+(defpoll current_char :interval "1s" 
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh current_char")
+
+(defpoll char_display_name :interval "1s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh char_name")
+
+(defpoll emotion_love :interval "2s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh love")
+
+(defpoll emotion_respect :interval "2s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh respect")
+
+(defpoll emotion_trust :interval "2s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh trust")
+
+(defpoll emotion_mood :interval "2s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh mood")
+
+(defpoll dialog_content :interval "1s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh dialog")
+
+(defpoll ascii_art :interval "3s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh ascii")
+
+(defpoll char_status :interval "2s"
+  "/home/deadgirl/.config/eww/companion/eww_poll_wrapper.sh status")
