@@ -9,6 +9,13 @@ def sig_bars(s):
     if s >= 20: return '\u2593\u2591\u2591\u2591'
     return '\u2591\u2591\u2591\u2591'
 
+def dist_s(sig):
+    if sig >= 80: return '<5m'
+    if sig >= 60: return '~15m'
+    if sig >= 40: return '~50m'
+    if sig >= 20: return '>100m'
+    return 'far'
+
 subprocess.Popen(
     ['nmcli', 'device', 'wifi', 'rescan'],
     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -56,6 +63,7 @@ for raw in r.stdout.splitlines():
         'level':    str(level),
         'band':     band,
         'dbm':      str(dbm),
+        'dist_s':   dist_s(sig),
     })
 
 devices.sort(key=lambda x: -x['signal'])

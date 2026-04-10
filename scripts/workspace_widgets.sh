@@ -7,7 +7,7 @@
 # workspace names are strings (match what sway uses: "1", "2", etc.)
 declare -A WS_MAP=(
     [1]="sidebar-left sidebar-right"         # full dashboard
-    [2]="sidebar-left scan-panel scan-pulse chan-panel net-panel"  # scan workspace — wifi + RF + chan + net
+    [2]="sidebar-left scan-panel chan-panel net-panel radar-panel ws2-actions"
     [3]="sidebar-left sidebar-right"
     [4]="sidebar-left sidebar-right"
     [5]="sidebar-left sidebar-right"
@@ -39,12 +39,19 @@ apply_ws() {
     CURRENT_WINDOWS="$target"
 }
 
+# wait for sway IPC to be stable on fresh boot
+sleep 1
+
 # init — detect focused workspace and apply immediately
 INIT_WS=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused==true) | .name')
 apply_ws "$INIT_WS"
 
-# stream workspace focus events
-swaymsg -t subscribe '["workspace"]' | while IFS= read -r line; do
-    ws=$(printf '%s' "$line" | jq -r 'select(.change=="focus") | .current.name // empty')
-    [ -n "$ws" ] && apply_ws "$ws"
+# stream workspace focus events — restart loop if swaymsg dies (can happen on boot)
+while true; do
+    swaymsg -m -t subscribe '["workspace"]' | \
+        jq --unbuffered -r 'select(.change=="focus") | .current.name // empty' | \
+        while IFS= read -r ws; do
+            [ -n "$ws" ] && apply_ws "$ws"
+        done
+    sleep 1
 done

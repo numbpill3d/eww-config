@@ -5,6 +5,7 @@
 # kill workspace and wifi refresh daemons (will restart below)
 pkill -f workspace_widgets.sh 2>/dev/null
 pkill -f wifi_scan_loop 2>/dev/null
+sleep 0.3
 
 # kill any running eww daemon cleanly
 eww kill 2>/dev/null

@@ -7,6 +7,8 @@
 (defvar agent_input "")
 (defvar agent_mode "home")
 (defvar scan_focused_key "")
+(defvar labels_tab "arp")
+(defvar scan_tab "wifi")
 
 ;; ---- POLLS ----
 (defpoll time_val    :interval "1s"   `date '+%H:%M:%S'`)
@@ -90,6 +92,16 @@
 ;; Workspace 2 — Halo-3 radar frame (500ms poll for smooth sweep)
 (defpoll radar_frame :interval "500ms" :initial "RADAR  0 contacts\n"
   `python3 ~/.config/eww/scripts/radar_ws2.py 2>/dev/null || echo "RADAR  error"`)
+
+;; Workspace 2 — wifi network count for scan panel header
+(defpoll wifi_count :interval "10s" :initial "0"
+  `cat /tmp/eww_wifi_scan.json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d))" 2>/dev/null || echo "0"`)
+
+;; Workspace 2 — kernel entropy pool
+(defpoll entropy_bar  :interval "2s"    :initial "[....................] 0"
+  `~/.config/eww/scripts/entropy.sh 2>/dev/null || echo "[....................] ?"`)
+(defpoll entropy_wave :interval "300ms" :initial "· · · · · · · · · · · · · ·  "
+  `~/.config/eww/scripts/entropy_wave.sh 2>/dev/null || echo "· · · · · · · · · · · · · ·  "`)
 
 ;; ---- WIDGETS ----
 
@@ -498,150 +510,163 @@
       (label :class "scan-title" :hexpand true :text "[ SCAN ]" :halign "start")
       (label :class "rf-spinner" :text rf_pulse)
       (label :class "agent-sep"  :text "  ")
-      (label :class "rf-summary" :text rf_summary)
+      (label :class "rf-summary" :text {"w:" + wifi_count + "  " + rf_summary})
       (label :class "agent-sep"  :text "  ")
       (button :class "scan-rbtn"
               :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json & ~/.config/eww/scripts/rf_live.sh &"
         (label :text "[r all]")))
 
-    ;; ── WIFI NETWORKS ────────────────────────────────────────────────────────
-    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
-      (label :class "scan-col-title" :hexpand true :text "[ WIFI NETWORKS ]" :halign "start")
-      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
-      (label :class "agent-sep" :text " ")
-      (button :class "scan-rbtn"
-              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
-        (label :text "[r]")))
+    ;; ── TABS ─────────────────────────────────────────────────────────────────
+    (box :class "scan-tabs" :orientation "h" :spacing 0
+      (button :class {scan_tab == "wifi" ? "scan-tab scan-tab-active" : "scan-tab"}
+              :onclick "eww update scan_tab=wifi"
+        (label :text "[ wifi ]"))
+      (button :class {scan_tab == "arp" ? "scan-tab scan-tab-active" : "scan-tab"}
+              :onclick "eww update scan_tab=arp"
+        (label :text "[ arp ]"))
+      (button :class {scan_tab == "bt" ? "scan-tab scan-tab-active" : "scan-tab"}
+              :onclick "eww update scan_tab=bt"
+        (label :text "[ bt ]")))
 
-    (scroll :class "scan-scroll" :vscroll true :height 140
+    ;; ── WIFI TAB ─────────────────────────────────────────────────────────────
+    (revealer :reveal {scan_tab == "wifi"} :transition "none"
       (box :orientation "v" :spacing 0
-        (for ap in wifi_devices
-          (box :class "scan-ap-row" :orientation "v" :spacing 0
+        (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+          (label :class "scan-col-title" :hexpand true :text "[ WIFI NETWORKS ]" :halign "start")
+          (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+          (label :class "agent-sep" :text " ")
+          (button :class "scan-rbtn"
+                  :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+            (label :text "[r]")))
+        (scroll :class "scan-scroll" :vscroll true :height 150
+          (box :orientation "v" :spacing 0
+            (for ap in wifi_devices
+              (box :class "scan-ap-row" :orientation "v" :spacing 0
+                (button :class "scan-row-btn"
+                        :tooltip {ap.ssid + "  [" + ap.security + "]\n"
+                                  + ap.bssid + "  " + ap.dbm + "dBm\n"
+                                  + "ch" + ap.chan + "  " + ap.band + "  " + ap.signal + "%"}
+                        :onclick {"~/.config/eww/scripts/scan_select.sh wifi '"
+                                  + ap.bssid + "'"}
+                  (box :orientation "h" :spacing 2
+                    (label :class {"scan-wsig scan-wsig-" + ap.level}
+                           :text {ap.bars} :width 26)
+                    (label :class {"scan-sec scan-sec-" + ap.security}
+                           :text {ap.security} :width 40)
+                    (label :class "scan-ssid" :hexpand true
+                           :text {ap.ssid == wifi_ssid ? "* " + ap.ssid : ap.ssid}
+                           :truncate true :limit-width 22)
+                    (label :class "scan-chan"
+                           :text {"ch" + ap.chan} :width 30)
+                    (label :class "scan-band" :text {ap.band} :width 28)
+                    (label :class "scan-sigpct"
+                           :text {ap.signal + "%"} :width 30)
+                    (label :class "scan-dist"
+                           :text {ap.dist_s} :width 38)))
+                (box :orientation "h" :spacing 2
+                  (label :class "scan-indent" :width 26 :text "")
+                  (label :class "scan-bssid"
+                         :text {ap.bssid} :limit-width 18 :width 110)
+                  (label :class "scan-dbm" :hexpand true
+                         :text {ap.dbm + "dBm"})
+                  (button :class "scan-cpbtn"
+                          :onclick {"wl-copy '" + ap.bssid + "'"}
+                    (label :text "[cp]")))))))))
 
-            ;; row 1: bars  sec  ssid  chan  band  signal%
-            (button :class "scan-row-btn"
-                    :tooltip {ap.ssid + "  [" + ap.security + "]\n"
-                              + ap.bssid + "  " + ap.dbm + "dBm\n"
-                              + "ch" + ap.chan + "  " + ap.band + "  " + ap.signal + "%"}
-                    :onclick {"~/.config/eww/scripts/scan_select.sh wifi '"
-                              + ap.bssid + "'"}
-              (box :orientation "h" :spacing 2
-                (label :class {"scan-wsig scan-wsig-" + ap.level}
-                       :text {ap.bars} :width 26)
-                (label :class {"scan-sec scan-sec-" + ap.security}
-                       :text {ap.security} :width 40)
-                (label :class "scan-ssid" :hexpand true
-                       :text {ap.ssid == wifi_ssid ? "* " + ap.ssid : ap.ssid}
-                       :truncate true :limit-width 22)
-                (label :class "scan-chan"
-                       :text {"ch" + ap.chan} :width 30)
-                (label :class "scan-band" :text {ap.band} :width 28)
-                (label :class "scan-sigpct"
-                       :text {ap.signal + "%"} :width 30)))
-
-            ;; row 2: bssid  dbm  [cp]
-            (box :orientation "h" :spacing 2
-              (label :class "scan-indent" :width 26 :text "")
-              (label :class "scan-bssid"
-                     :text {ap.bssid} :limit-width 18 :width 110)
-              (label :class "scan-dbm" :hexpand true
-                     :text {ap.dbm + "dBm"})
-              (button :class "scan-cpbtn"
-                      :onclick {"wl-copy '" + ap.bssid + "'"}
-                (label :text "[cp]")))))))
-
-    ;; ── ARP DEVICES ──────────────────────────────────────────────────────────
-    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
-      (label :class "scan-col-title" :hexpand true :text "[ ARP DEVICES ]" :halign "start")
-      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
-      (label :class "agent-sep" :text " ")
-      (button :class "scan-rbtn"
-              :onclick "~/.config/eww/scripts/rf_live.sh &"
-        (label :text "[r]")))
-
-    (scroll :class "scan-scroll" :vscroll true :height 105
+    ;; ── ARP TAB ──────────────────────────────────────────────────────────────
+    (revealer :reveal {scan_tab == "arp"} :transition "none"
       (box :orientation "v" :spacing 0
-        (for device in arp_devices
-          (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+        (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+          (label :class "scan-col-title" :hexpand true :text "[ ARP DEVICES ]" :halign "start")
+          (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse)
+          (label :class "agent-sep" :text " ")
+          (button :class "scan-rbtn"
+                  :onclick "~/.config/eww/scripts/rf_live.sh &"
+            (label :text "[r]")))
+        (scroll :class "scan-scroll" :vscroll true :height 150
+          (box :orientation "v" :spacing 0
+            (for device in arp_devices
+              (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+                (button :class {"scan-row-btn rf-known-" + device.new}
+                        :tooltip {device.display + "  [" + device.dtype + "]\n"
+                                  + device.addr + "  " + device.mac + "\n"
+                                  + device.vendor + "  state: " + device.state}
+                        :onclick {"~/.config/eww/scripts/scan_select.sh arp '"
+                                  + device.key + "'"}
+                  (box :orientation "h" :spacing 2
+                    (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
+                    (label :class {"rf-sig " + device.state}
+                           :text {device.sig} :width 26)
+                    (label :class {"rf-dtype rf-dtype-" + device.dtype}
+                           :text {device.dtype} :width 28)
+                    (label :class {"scan-devname rf-new-" + device.new}
+                           :hexpand true :text {device.display}
+                           :truncate true :limit-width 20)
+                    (label :class {"rf-state " + device.state}
+                           :text {device.state_s} :limit-width 7 :width 40)
+                    (label :class {"scan-dist scan-dist-" + device.dist_s}
+                           :text {device.dist_s} :width 36)))
+                (box :orientation "h" :spacing 2
+                  (label :class "scan-indent" :width 26 :text "")
+                  (label :class "rf-addr-sm"
+                         :text {device.addr} :limit-width 15 :width 95)
+                  (label :class {"rf-vendor rf-dtype-" + device.dtype}
+                         :hexpand true :text {device.vendor}
+                         :limit-width 12 :truncate true)
+                  (button :class "scan-cpbtn"
+                          :onclick {"wl-copy '" + device.key + "'"}
+                    (label :text "[cp]"))
+                  (button :class {"rf-mark-btn rf-mark-" + device.new}
+                          :onclick {"~/.config/eww/scripts/rf_mark.sh '"
+                                    + device.key + "'"}
+                    (label :text "+kn")))))))))
 
-            ;; row 1: sig  dtype  display  state
-            (button :class {"scan-row-btn rf-known-" + device.new}
-                    :tooltip {device.display + "  [" + device.dtype + "]\n"
-                              + device.addr + "  " + device.mac + "\n"
-                              + device.vendor + "  state: " + device.state}
-                    :onclick {"~/.config/eww/scripts/scan_select.sh arp '"
-                              + device.key + "'"}
-              (box :orientation "h" :spacing 2
-                (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
-                (label :class {"rf-sig " + device.state}
-                       :text {device.sig} :width 26)
-                (label :class {"rf-dtype rf-dtype-" + device.dtype}
-                       :text {device.dtype} :width 28)
-                (label :class {"scan-devname rf-new-" + device.new}
-                       :hexpand true :text {device.display}
-                       :truncate true :limit-width 20)
-                (label :class {"rf-state " + device.state}
-                       :text {device.state_s} :limit-width 7 :width 40)))
-
-            ;; row 2: addr  oui/last-octet  vendor  [cp]  [+kn]
-            (box :orientation "h" :spacing 2
-              (label :class "scan-indent" :width 26 :text "")
-              (label :class "rf-addr-sm"
-                     :text {device.addr} :limit-width 15 :width 95)
-              (label :class {"rf-vendor rf-dtype-" + device.dtype}
-                     :hexpand true :text {device.vendor}
-                     :limit-width 12 :truncate true)
-              (button :class "scan-cpbtn"
-                      :onclick {"wl-copy '" + device.key + "'"}
-                (label :text "[cp]"))
-              (button :class {"rf-mark-btn rf-mark-" + device.new}
-                      :onclick {"~/.config/eww/scripts/rf_mark.sh '"
-                                + device.key + "'"}
-                (label :text "+kn")))))))
-
-    ;; ── BLUETOOTH DEVICES ────────────────────────────────────────────────────
-    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
-      (label :class "scan-col-title" :hexpand true :text "[ BLUETOOTH ]" :halign "start")
-      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
-
-    (scroll :class "scan-scroll" :vscroll true :height 55
+    ;; ── BT TAB ───────────────────────────────────────────────────────────────
+    (revealer :reveal {scan_tab == "bt"} :transition "none"
       (box :orientation "v" :spacing 0
-        (for device in bt_devices
-          (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+        (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+          (label :class "scan-col-title" :hexpand true :text "[ BLUETOOTH ]" :halign "start")
+          (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+        (scroll :class "scan-scroll" :vscroll true :height 150
+          (box :orientation "v" :spacing 0
+            (for device in bt_devices
+              (box :class {"scan-rf-row rf-" + device.new} :orientation "v" :spacing 0
+                (button :class {"scan-row-btn rf-known-" + device.new}
+                        :tooltip {device.display + "  [bt/" + device.dtype + "]\n"
+                                  + device.mac + "\n"
+                                  + device.vendor + "  state: " + device.state}
+                        :onclick {"~/.config/eww/scripts/scan_select.sh bt '"
+                                  + device.key + "'"}
+                  (box :orientation "h" :spacing 2
+                    (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
+                    (label :class {"rf-sig " + device.state}
+                           :text {device.sig} :width 26)
+                    (label :class {"rf-badge rf-badge-bt"} :text "bt" :width 24)
+                    (label :class {"rf-dtype rf-dtype-" + device.dtype}
+                           :text {device.dtype} :width 28)
+                    (label :class {"scan-devname rf-new-" + device.new}
+                           :hexpand true :text {device.display}
+                           :truncate true :limit-width 22)
+                    (label :class {"rf-state " + device.state}
+                           :text {device.state_s} :limit-width 6 :width 36)
+                    (label :class {"scan-dist scan-dist-" + device.dist_s}
+                           :text {device.dist_s} :width 36)))
+                (box :orientation "h" :spacing 2
+                  (label :class "scan-indent" :width 26 :text "")
+                  (label :class "rf-addr-sm"
+                         :text {device.addr} :limit-width 15 :width 95)
+                  (label :class {"rf-vendor rf-dtype-" + device.dtype}
+                         :hexpand true :text {device.vendor}
+                           :limit-width 14 :truncate true)
+                  (button :class "scan-cpbtn"
+                          :onclick {"wl-copy '" + device.key + "'"}
+                    (label :text "[cp]"))
+                  (button :class {"rf-mark-btn rf-mark-" + device.new}
+                          :onclick {"~/.config/eww/scripts/rf_mark.sh '"
+                                    + device.key + "'"}
+                    (label :text "+kn")))))))))
 
-            (button :class {"scan-row-btn rf-known-" + device.new}
-                    :tooltip {device.display + "  [bt/" + device.dtype + "]\n"
-                              + device.mac + "\n"
-                              + device.vendor + "  state: " + device.state}
-                    :onclick {"~/.config/eww/scripts/scan_select.sh bt '"
-                              + device.key + "'"}
-              (box :orientation "h" :spacing 2
-                (label :class {"rf-cdot " + device.colorclass} :text "■" :width 12)
-                (label :class {"rf-sig " + device.state}
-                       :text {device.sig} :width 26)
-                (label :class {"rf-badge rf-badge-bt"} :text "bt" :width 24)
-                (label :class {"rf-dtype rf-dtype-" + device.dtype}
-                       :text {device.dtype} :width 28)
-                (label :class {"scan-devname rf-new-" + device.new}
-                       :hexpand true :text {device.display}
-                       :truncate true :limit-width 22)
-                (label :class {"rf-state " + device.state}
-                       :text {device.state_s} :limit-width 6 :width 36)))
 
-            (box :orientation "h" :spacing 2
-              (label :class "scan-indent" :width 26 :text "")
-              (label :class "rf-addr-sm"
-                     :text {device.addr} :limit-width 15 :width 95)
-              (label :class {"rf-vendor rf-dtype-" + device.dtype}
-                     :hexpand true :text {device.vendor}
-                     :limit-width 14 :truncate true)
-              (button :class "scan-cpbtn"
-                      :onclick {"wl-copy '" + device.key + "'"}
-                (label :text "[cp]"))
-              (button :class {"rf-mark-btn rf-mark-" + device.new}
-                      :onclick {"~/.config/eww/scripts/rf_mark.sh '"
-                                + device.key + "'"}
-                (label :text "+kn")))))))
 
     ;; ── FOCUS PANEL ──────────────────────────────────────────────────────────
     (box :class "scan-focus-wrap" :orientation "v" :spacing 0
@@ -656,7 +681,7 @@
         (button :class "scan-rbtn"
                 :onclick "truncate -s 0 /tmp/eww_scan_focus"
           (label :text "[clr]")))
-      (scroll :class "scan-scroll" :vscroll true :height 38
+      (scroll :class "scan-scroll" :vscroll true :height 55
         (label :class "scan-focus-text" :halign "start" :valign "start"
                :wrap false :text scan_focus_data))
       (box :class "scan-focus-actions" :orientation "h" :spacing 4 :valign "center"
@@ -696,7 +721,7 @@
 
 (defwindow scan-panel
   :monitor 0
-  :geometry (geometry :x "610px" :y "30px" :width "720px" :height "530px"
+  :geometry (geometry :x "560px" :y "30px" :width "700px" :height "390px"
                       :anchor "top left")
   :stacking "bottom"
   :focusable true
@@ -724,7 +749,7 @@
 
 (defwindow radar-panel
   :monitor 0
-  :geometry (geometry :x "1320px" :y "243px" :width "390px" :height "420px"
+  :geometry (geometry :x "1270px" :y "248px" :width "380px" :height "430px"
                       :anchor "top left")
   :stacking "bottom"
   :focusable false
@@ -871,7 +896,7 @@
 ;; channel congestion + bandwidth — workspace 2, left column
 (defwindow chan-panel
   :monitor 0
-  :geometry (geometry :x "190px" :y "30px" :width "400px" :height "320px"
+  :geometry (geometry :x "190px" :y "30px" :width "360px" :height "530px"
                       :anchor "top left")
   :stacking "bottom"
   :focusable false
@@ -880,8 +905,165 @@
 ;; latency / net / dns / rf — workspace 2, right column upper
 (defwindow net-panel
   :monitor 0
-  :geometry (geometry :x "1340px" :y "30px" :width "370px" :height "205px"
+  :geometry (geometry :x "1270px" :y "30px" :width "380px" :height "210px"
                       :anchor "top left")
   :stacking "bottom"
   :focusable false
   (w-ping))
+(defwindow ws2-sidebar-right
+  :monitor 0
+  :geometry (geometry :x "0px" :y "0px" :width "390px" :height "100%"
+                      :anchor "top right")
+  :stacking "bottom"
+  :exclusive false
+  :namespace "eww-sidebar-r"
+  (box :class "root" :orientation "v" :spacing 10 :valign "start" :halign "fill"
+    (w-ping)
+    (w-radar)))
+
+;; ---- WORKSPACE 2: ACTION BAR (lower-left, below chan-panel) ----
+;; positioned at x=190 y=568 — fills the empty zone beneath the chan-panel
+;; buttons trigger real scans, open labeler, export, clear-new
+
+(defwidget w-ws2-actions []
+  (box :class "ws2-actions-root" :orientation "v" :spacing 4
+
+    ;; header
+    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+      (label :class "scan-col-title" :hexpand true :text "[ ACTIONS ]" :halign "start")
+      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+
+    ;; row 1 — scan triggers
+    (box :class "ws2-act-row" :orientation "h" :spacing 4
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json & ~/.config/eww/scripts/rf_live.sh &"
+        (label :text "[r all]"))
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+        (label :text "[r wifi]"))
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "~/.config/eww/scripts/rf_live.sh &"
+        (label :text "[r arp]")))
+
+    ;; row 2 — tools
+    (box :class "ws2-act-row" :orientation "h" :spacing 4
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "eww open --toggle device-labels"
+        (label :text "[labels]"))
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "~/.config/eww/scripts/rf_clr_new.sh &"
+        (label :text "[clr new]"))
+      (button :class "ws2-act-btn" :hexpand true
+              :onclick "~/.config/eww/scripts/ws2_export.sh &"
+        (label :text "[export]")))
+
+    ;; live status — rf device counts + gateway ping
+    (box :class "ws2-act-status" :orientation "h" :spacing 6 :valign "center"
+      (label :class "label-dim" :text "rf:")
+      (label :class "stat-val"  :hexpand true :text {"w:" + wifi_count + "  " + rf_summary})
+      (label :class "label-dim" :text "gw:")
+      (label :class "stat-val ws2-ping-val" :text ping_ms))
+
+    ;; bandwidth bars — DN/UP from real iface counters
+    (label :class "ws2-bw-txt" :halign "start" :wrap true :text net_bw)
+
+    ;; ── ENTROPY ──────────────────────────────────────────────────────────────
+    (box :class "scan-section-hdr" :orientation "h" :spacing 3 :valign "center"
+      (label :class "scan-col-title" :hexpand true :text "[ ENTROPY ]" :halign "start")
+      (label :class "rf-spinner ws2-hdr-spinner" :text rf_pulse))
+    (label :class "ws2-entropy-bar" :halign "start" :text entropy_bar)
+    (label :class "ws2-entropy-wave" :halign "start" :text entropy_wave)))
+
+(defwindow ws2-actions
+  :monitor 0
+  :geometry (geometry :x "190px" :y "568px" :width "360px" :height "295px"
+                      :anchor "top left")
+  :stacking "bottom"
+  :focusable false
+  (w-ws2-actions))
+
+;; ---- DEVICE LABELS POPUP ----
+;; toggled by [labels] button in ws2-actions
+;; tabbed: wifi / arp / bt — inline nick editor for each detected device
+
+(defwidget w-device-labels []
+  (box :class "labels-root" :orientation "v" :spacing 0
+
+    ;; title bar
+    (box :class "scan-topbar" :orientation "h" :spacing 0 :valign "center"
+      (label :class "scan-title" :hexpand true :text "[ DEVICE LABELS ]" :halign "start")
+      (button :class "scan-rbtn" :onclick "eww close device-labels"
+        (label :text "[x]")))
+
+    ;; tab row
+    (box :class "labels-tabs" :orientation "h" :spacing 0
+      (button :class {labels_tab == "wifi" ? "labels-tab labels-tab-active" : "labels-tab"}
+              :onclick "eww update labels_tab=wifi"
+        (label :text "[ wifi ]"))
+      (button :class {labels_tab == "arp" ? "labels-tab labels-tab-active" : "labels-tab"}
+              :onclick "eww update labels_tab=arp"
+        (label :text "[ arp ]"))
+      (button :class {labels_tab == "bt" ? "labels-tab labels-tab-active" : "labels-tab"}
+              :onclick "eww update labels_tab=bt"
+        (label :text "[ bt ]")))
+
+    ;; wifi tab — list all APs, nick input keyed on bssid
+    (revealer :reveal {labels_tab == "wifi"} :transition "none"
+      (scroll :vscroll true :height 336 :class "scan-scroll"
+        (box :orientation "v" :spacing 0
+          (for ap in wifi_devices
+            (box :class "labels-row" :orientation "h" :spacing 4 :valign "center"
+              (label :class {"scan-wsig scan-wsig-" + ap.level}
+                     :text {ap.bars} :width 26)
+              (label :class "scan-dist" :text {ap.dist_s} :width 38)
+              (label :class "labels-name" :hexpand true
+                     :text {ap.ssid} :limit-width 18 :truncate true)
+              (input :class "labels-input" :value ""
+                     :onaccept {"~/.config/eww/scripts/rf_nick.sh '" + ap.bssid + "' '{}'"})
+              (button :class "scan-cpbtn"
+                      :onclick {"~/.config/eww/scripts/rf_nick.sh '" + ap.bssid + "' '-'"}
+                (label :text "[-]")))))))
+
+    ;; arp tab — list all ARP nodes, nick input keyed on IP
+    (revealer :reveal {labels_tab == "arp"} :transition "none"
+      (scroll :vscroll true :height 336 :class "scan-scroll"
+        (box :orientation "v" :spacing 0
+          (for device in arp_devices
+            (box :class "labels-row" :orientation "h" :spacing 4 :valign "center"
+              (label :class {"rf-sig " + device.state}
+                     :text {device.sig} :width 26)
+              (label :class {"scan-dist scan-dist-" + device.dist_s}
+                     :text {device.dist_s} :width 38)
+              (label :class "labels-name" :hexpand true
+                     :text {device.display} :limit-width 16 :truncate true)
+              (input :class "labels-input" :value ""
+                     :onaccept {"~/.config/eww/scripts/rf_nick.sh '" + device.key + "' '{}'"})
+              (button :class "scan-cpbtn"
+                      :onclick {"~/.config/eww/scripts/rf_nick.sh '" + device.key + "' '-'"}
+                (label :text "[-]")))))))
+
+    ;; bt tab — list all paired/connected BT devices
+    (revealer :reveal {labels_tab == "bt"} :transition "none"
+      (scroll :vscroll true :height 336 :class "scan-scroll"
+        (box :orientation "v" :spacing 0
+          (for device in bt_devices
+            (box :class "labels-row" :orientation "h" :spacing 4 :valign "center"
+              (label :class {"rf-sig " + device.state}
+                     :text {device.sig} :width 26)
+              (label :class {"scan-dist scan-dist-" + device.dist_s}
+                     :text {device.dist_s} :width 38)
+              (label :class "labels-name" :hexpand true
+                     :text {device.display} :limit-width 16 :truncate true)
+              (input :class "labels-input" :value ""
+                     :onaccept {"~/.config/eww/scripts/rf_nick.sh '" + device.key + "' '{}'"})
+              (button :class "scan-cpbtn"
+                      :onclick {"~/.config/eww/scripts/rf_nick.sh '" + device.key + "' '-'"}
+                (label :text "[-]")))))))))
+
+(defwindow device-labels
+  :monitor 0
+  :geometry (geometry :x "50%" :y "50%" :width "480px" :height "420px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  (w-device-labels))

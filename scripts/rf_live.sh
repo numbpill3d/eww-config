@@ -134,6 +134,12 @@ while IFS= read -r line; do
   state_l="${state,,}"
   state_s=$(short_state "$state_l")
   sig=$(sig_bar "$state_l")
+  case "$state" in
+    REACHABLE)        arp_dist_s="near" ;;
+    DELAY|PROBE)      arp_dist_s="mid"  ;;
+    STALE)            arp_dist_s="far"  ;;
+    *)                arp_dist_s="?"    ;;
+  esac
   last_oct=$(printf '%s' "$ip" | awk -F. '{print "."$4}')
   hostname=$(get_hostname "$ip")
   vendor=$(oui_vendor "$mac")
@@ -144,7 +150,7 @@ while IFS= read -r line; do
   is_new="false"
   grep -qF "$ip" "$KNOWN_FILE" 2>/dev/null || { is_new="true"; (( new_count++ )); }
 
-  result+="${sep}{\"addr\":\"$(jesc "$ip")\",\"mac\":\"$(jesc "$mac")\",\"key\":\"$(jesc "$ip")\",\"proto\":\"arp\",\"state\":\"$(jesc "$state_l")\",\"state_s\":\"$(jesc "$state_s")\",\"sig\":\"$(jesc "$sig")\",\"display\":\"$(jesc "$display")\",\"vendor\":\"$(jesc "$vendor")\",\"dtype\":\"$dtype\",\"new\":\"$is_new\",\"x\":$x,\"y\":$y,\"oui\":\"$(jesc "$last_oct")\"}"
+  result+="${sep}{\"addr\":\"$(jesc "$ip")\",\"mac\":\"$(jesc "$mac")\",\"key\":\"$(jesc "$ip")\",\"proto\":\"arp\",\"state\":\"$(jesc "$state_l")\",\"state_s\":\"$(jesc "$state_s")\",\"sig\":\"$(jesc "$sig")\",\"display\":\"$(jesc "$display")\",\"vendor\":\"$(jesc "$vendor")\",\"dtype\":\"$dtype\",\"new\":\"$is_new\",\"x\":$x,\"y\":$y,\"oui\":\"$(jesc "$last_oct")\",\"dist_s\":\"$arp_dist_s\"}"
   sep=","
   (( count++ ))
   (( arp_count++ ))
@@ -176,6 +182,11 @@ if command -v bluetoothctl >/dev/null 2>&1; then
     esac
     state_s=$(short_state "$state")
     sig=$(sig_bar "$state")
+    case "$state" in
+      connected) bt_dist_s="near" ;;
+      paired)    bt_dist_s="knwn" ;;
+      *)         bt_dist_s="?"    ;;
+    esac
 
     read -r x y <<< "$(coords "$mac" "$dist")"
     oui="${mac:0:8}"
@@ -186,7 +197,7 @@ if command -v bluetoothctl >/dev/null 2>&1; then
     is_new="false"
     grep -qF "$mac" "$KNOWN_FILE" 2>/dev/null || { is_new="true"; (( new_count++ )); }
 
-    result+="${sep}{\"addr\":\"$(jesc "$name")\",\"mac\":\"$(jesc "$mac")\",\"key\":\"$(jesc "$mac")\",\"proto\":\"bt\",\"state\":\"$(jesc "$state")\",\"state_s\":\"$(jesc "$state_s")\",\"sig\":\"$(jesc "$sig")\",\"display\":\"$(jesc "$display")\",\"vendor\":\"$(jesc "$vendor")\",\"dtype\":\"$dtype\",\"new\":\"$is_new\",\"x\":$x,\"y\":$y,\"oui\":\"$(jesc "$oui")\"}"
+    result+="${sep}{\"addr\":\"$(jesc "$name")\",\"mac\":\"$(jesc "$mac")\",\"key\":\"$(jesc "$mac")\",\"proto\":\"bt\",\"state\":\"$(jesc "$state")\",\"state_s\":\"$(jesc "$state_s")\",\"sig\":\"$(jesc "$sig")\",\"display\":\"$(jesc "$display")\",\"vendor\":\"$(jesc "$vendor")\",\"dtype\":\"$dtype\",\"new\":\"$is_new\",\"x\":$x,\"y\":$y,\"oui\":\"$(jesc "$oui")\",\"dist_s\":\"$bt_dist_s\"}"
     sep=","
     (( count++ ))
     (( bt_count++ ))

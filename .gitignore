@@ -1,3 +1,7 @@
 secrets.env
 *.bak
-*.swp
+radar.db
+logs/
+data/
+known_devices.json
+known_devices.txt

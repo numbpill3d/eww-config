@@ -6,5 +6,5 @@
 swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name'
 
 # stream workspace focus changes
-exec swaymsg -t subscribe '["workspace"]' \
+exec swaymsg -m -t subscribe '["workspace"]' \
   | jq --unbuffered -r 'select(.change=="focus") | .current.name'
