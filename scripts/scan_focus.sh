@@ -42,6 +42,13 @@ case "$PROTO" in
     printf 'chan    ch%s  %s\n'     "$chan" "$band"
     printf 'sec     %s\n'           "$sec"
     [[ -n "$vendor" ]] && printf 'vendor  %s\n' "$vendor"
+    # wardrive DB history
+    python3 ~/.config/eww/scripts/wardrive_db.py focus "$KEY" 2>/dev/null
+    db_focus=$(cat /tmp/eww_wardrive_focus 2>/dev/null)
+    if [[ -n "$db_focus" ]]; then
+        printf '\n--- db ---\n'
+        printf '%s\n' "$db_focus"
+    fi
     true
     ;;
 

@@ -12,7 +12,7 @@ LOG_DIR  = os.path.expanduser("~/.claude/projects")
 LOG_DIR2 = os.path.expanduser("~/.claude/logs")          # fallback, may not exist
 INTERVAL = 60
 
-# Pricing (Sonnet 4.5 approximate, $/1M tokens)
+# Pricing (Sonnet 4.6, $/1M tokens)
 INPUT_COST  = 3.00
 OUTPUT_COST = 15.00
 

@@ -9,6 +9,12 @@
 (defvar scan_focused_key "")
 (defvar labels_tab "arp")
 (defvar scan_tab "wifi")
+;; left sidebar slot 2: "sys" | "net"
+(defvar lslot "sys")
+;; rf panel mode: false=compact (more rows), true=detail (2-row)
+(defvar rf_detail false)
+;; wardrive-map window tab: "map" | "list" | "stats"
+(defvar wardrive_tab "map")
 
 ;; ---- POLLS ----
 (defpoll time_val    :interval "1s"   `date '+%H:%M:%S'`)
@@ -34,6 +40,7 @@
 (defpoll cc_tokens_day  :interval "60s" `cat /tmp/eww_cc_tokens_day  2>/dev/null || echo "0"`)
 (defpoll cc_tokens_week :interval "60s" `cat /tmp/eww_cc_tokens_week 2>/dev/null || echo "0"`)
 (defpoll cc_cost_day    :interval "60s" `cat /tmp/eww_cc_cost_day    2>/dev/null || echo "$0.00"`)
+(defpoll cc_session     :interval "5s"  `cat /tmp/eww_cc_session 2>/dev/null || echo "idle"`)
 
 ;; RF scan — live ARP + bluetooth, returns JSON array of device objects
 (defpoll rf_devices :interval "10s" :initial "[]"
@@ -45,6 +52,30 @@
 (defpoll rf_pulse :interval "500ms"
   `~/.config/eww/scripts/rf_pulse.sh`)
 
+
+;; Hardware sensors — ThinkPad CPU temp, fan, load avg
+(defpoll sensors_val :interval "10s"
+  `~/.config/eww/scripts/sensors.sh 2>/dev/null || echo "tmp:?"`)
+
+;; Current wifi link — signal dBm + tx rate
+(defpoll wifi_rssi :interval "10s"
+  `~/.config/eww/scripts/wifi_info.sh 2>/dev/null || echo "?"`)
+
+;; Wardrive DB stats (written as side-effect of wifi_scan logging)
+(defpoll wardrive_stats :interval "30s"
+  `cat /tmp/eww_wardrive_stats 2>/dev/null || echo "db:0"`)
+
+;; Wardrive map/list/stats frames — generated from DB
+(defpoll wardrive_map_frame :interval "5s" :initial "scanning..."
+  `python3 ~/.config/eww/scripts/wardrive_map.py map 2>/dev/null || echo "db empty"`)
+(defpoll wardrive_list_txt  :interval "30s" :initial "loading..."
+  `python3 ~/.config/eww/scripts/wardrive_map.py list 2>/dev/null || echo "db empty"`)
+(defpoll wardrive_stats_txt :interval "60s" :initial "loading..."
+  `python3 ~/.config/eww/scripts/wardrive_map.py stats 2>/dev/null || echo "db empty"`)
+
+;; Wardrive focus — written by wardrive_db.py focus <bssid>
+(defpoll wardrive_focus :interval "2s" :initial "[ select a wifi network to inspect ]"
+  `cat /tmp/eww_wardrive_focus 2>/dev/null || echo "[ select a wifi network to inspect ]"`)
 
 ;; Agent polls
 (defpoll agent_display :interval "500ms" `~/.config/eww/scripts/agent_display.sh`)
@@ -107,71 +138,86 @@
 
 ;; Clock block
 (defwidget w-clock []
-  (box :class "panel clock-panel" :orientation "v" :spacing 1
-    (label :class "clock-time" :text time_val)
-    (label :class "clock-date" :text date_val)
-    (label :class "label-dim"  :text wifi_ssid)))
+  (box :class "panel clock-panel" :orientation "v" :spacing 0
+    (box :orientation "h" :spacing 6
+      (label :class "clock-time" :text time_val)
+      (label :class "clock-date" :text date_val :valign "end"))
+    (label :class "label-dim" :text wifi_ssid)))
 
-;; System vitals
+;; Merged slot widget — sys/net share identical structure, only text swaps
+;; No height change between modes, so the exclusive sidebar window never repositions
 (defwidget w-vitals []
   (box :class "panel" :orientation "v" :spacing 2
-    (label :class "section-label" :text "[ SYS ]" :halign "start")
+    (box :orientation "h" :spacing 3 :valign "center"
+      (label :class "section-label"
+             :text {lslot == "sys" ? "[ SYS ]" : "[ NET ]"}
+             :hexpand true :halign "start")
+      (button :class "slot-cycle-btn"
+              :onclick {lslot == "sys" ? "eww update lslot=\"net\"" : "eww update lslot=\"sys\""}
+        (label :text {lslot == "sys" ? "[>]" : "[x]"})))
     (box :class "stat-row" :orientation "h" :spacing 4
-      (label :class "label-dim" :text "CPU")
-      (label :class "stat-val"  :text cpu_val))
-    (label :class "stat-bar" :text cpu_bar :halign "start")
+      (label :class "label-dim" :text {lslot == "sys" ? "CPU" : "DN"})
+      (label :class "stat-val"  :text {lslot == "sys" ? cpu_val : net_down}))
+    (label :class "stat-bar" :text {lslot == "sys" ? cpu_bar : ""} :halign "start")
     (box :class "stat-row" :orientation "h" :spacing 4
-      (label :class "label-dim" :text "MEM")
-      (label :class "stat-val"  :text mem_val))
-    (label :class "stat-bar" :text mem_bar :halign "start")
+      (label :class "label-dim" :text {lslot == "sys" ? "MEM" : "UP"})
+      (label :class "stat-val"  :text {lslot == "sys" ? mem_val : net_up}))
+    (label :class "stat-bar" :text {lslot == "sys" ? mem_bar : ping_spark} :halign "start")
     (box :class "stat-row" :orientation "h" :spacing 4
-      (label :class "label-dim" :text "DSK")
-      (label :class "stat-val"  :text disk_val))
+      (label :class "label-dim" :text {lslot == "sys" ? "DSK" : "ping"})
+      (label :class "stat-val"  :text {lslot == "sys" ? disk_val : ping_ms + "ms"}))
     (box :class "stat-row" :orientation "h" :spacing 4
-      (label :class "label-dim" :text "NET")
-      (label :class "stat-val"  :text {net_up + " / " + net_down}))
+      (label :class "label-dim" :text {lslot == "sys" ? "NET" : "dns"})
+      (label :class "stat-val"  :text {lslot == "sys" ? net_up + " / " + net_down : dns_server}))
     (box :class "stat-row" :orientation "h" :spacing 4
-      (label :class "label-dim" :text "BAT")
-      (label :class "stat-val"  :text {bat_val + "% " + bat_status}))))
+      (label :class "label-dim" :text {lslot == "sys" ? "BAT" : "pub"})
+      (label :class "stat-val"  :text {lslot == "sys" ? bat_val + "% " + bat_status : pub_ip}))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text {lslot == "sys" ? "HW" : "rf"})
+      (label :class "stat-val"  :text {lslot == "sys" ? sensors_val : wifi_rssi}))))
 
-;; RF scan — live device list with animated scan indicator, signal bars, proto badges
+;; RF scan — compact (default) or detail view, toggled with [+]/[-]
 (defwidget w-rf-radar []
   (box :class "panel rf-panel" :orientation "v" :spacing 2
-    ;; header: section label + live spinner + proto/unknown summary + reload glyph
+    ;; header: label + spinner + summary + detail-toggle + reload
     (box :orientation "h" :spacing 3 :valign "center"
       (label :class "section-label" :text "[ RF ]" :halign "start")
       (label :class "rf-spinner" :text rf_pulse)
       (label :class "rf-summary" :hexpand true :halign "start" :text rf_summary)
+      (button :class "rf-detail-toggle"
+              :onclick {rf_detail ? "eww update rf_detail=false" : "eww update rf_detail=true"}
+        (label :text {rf_detail ? "[-]" : "[+]"}))
       (button :class "rf-scan-micro" :onclick "eww poll rf_devices"
         (label :text "[r]")))
-    ;; scrollable device list — click row copies MAC to clipboard
-    (scroll :vscroll true :height 120
+    ;; compact: 1-row always visible, detail row revealed on toggle
+    ;; compact scroll taller so more devices fit; shrinks when detail opens
+    (scroll :vscroll true :height {rf_detail ? 130 : 210}
       (box :orientation "v" :spacing 1
         (for device in rf_devices
           (box :class {"rf-device rf-" + device.new} :orientation "v" :spacing 0
-            ;; row 1: sig bars + proto + display name + short state
+            ;; primary row — always visible
             (button :class "rf-row-btn"
                     :onclick {"wl-copy '" + device.key + "'"}
-              (box :orientation "h" :spacing 3
+              (box :orientation "h" :spacing 2
                 (label :class {"rf-sig " + device.state}
-                       :text {device.sig} :width 26)
+                       :text {device.sig} :width {rf_detail ? 26 : 22})
                 (label :class {"rf-badge " + device.proto}
-                       :text {device.proto} :width 22)
-                (label :class {"rf-name " + device.new}
-                       :hexpand true
-                       :text {device.display}
-                       :truncate true :limit-width 14)
+                       :text {device.proto} :width {rf_detail ? 22 : 18})
+                (label :class {"rf-name " + device.new} :hexpand true
+                       :text {device.display} :truncate true
+                       :limit-width {rf_detail ? 14 : 10})
                 (label :class {"rf-state " + device.state}
-                       :text {device.state_s} :limit-width 5)))
-            ;; row 2: IP addr + last-octet id + mark button
-            (box :orientation "h" :spacing 3
-              (label :class "rf-addr-sm" :text {device.addr}
-                     :width 70 :truncate true :limit-width 15)
-              (label :class "rf-oui" :hexpand true
-                     :text {device.oui})
-              (button :class "rf-mark-btn"
-                      :onclick {"~/.config/eww/scripts/rf_mark.sh '" + device.key + "'"}
-                (label :text "+kn")))))))))
+                       :text {rf_detail ? device.state_s : device.addr}
+                       :limit-width {rf_detail ? 5 : 11})))
+            ;; detail-only second row: addr + oui + mark
+            (revealer :reveal rf_detail :duration "80ms"
+              (box :orientation "h" :spacing 3
+                (label :class "rf-addr-sm" :text {device.addr}
+                       :width 70 :truncate true :limit-width 15)
+                (label :class "rf-oui" :hexpand true :text {device.oui})
+                (button :class "rf-mark-btn"
+                        :onclick {"~/.config/eww/scripts/rf_mark.sh '" + device.key + "'"}
+                  (label :text "+kn"))))))))))
 
 ;; GitHub stats
 (defwidget w-github []
@@ -201,7 +247,10 @@
 ;; Claude Code token tracker
 (defwidget w-claudecode []
   (box :class "panel" :orientation "v" :spacing 3
-    (label :class "section-label" :text "[ CC TOKENS ]" :halign "start")
+    (box :orientation "h" :spacing 3 :valign "center"
+      (label :class "section-label" :text "[ CC TOKENS ]" :hexpand true :halign "start")
+      (label :class {"agent-status-dot " + cc_session}
+             :text {cc_session == "active" ? "●" : "·"}))
     (box :class "stat-row" :orientation "h" :spacing 6
       (label :class "label-dim" :text "today")
       (label :class "stat-val accent" :text cc_tokens_day))
@@ -211,6 +260,30 @@
     (box :class "stat-row" :orientation "h" :spacing 6
       (label :class "label-dim" :text "cost")
       (label :class "stat-val" :text cc_cost_day))))
+
+;; Net slot — replaces sys vitals when lslot="net"
+(defwidget w-net-bw []
+  (box :class "panel" :orientation "v" :spacing 2
+    (box :orientation "h" :spacing 3 :valign "center"
+      (label :class "section-label" :text "[ NET ]" :hexpand true :halign "start")
+      (button :class "slot-cycle-btn" :onclick "eww update lslot=\"sys\""
+        (label :text "[x]")))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "DN")
+      (label :class "stat-val accent" :text net_down))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "UP")
+      (label :class "stat-val" :text net_up))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "ping")
+      (label :class "stat-val" :text {ping_ms + "ms"}))
+    (label :class "stat-bar" :text ping_spark :halign "start")
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "dns")
+      (label :class "stat-val" :text dns_server))
+    (box :class "stat-row" :orientation "h" :spacing 4
+      (label :class "label-dim" :text "pub")
+      (label :class "stat-val" :text pub_ip))))
 
 ;; Sway keybindings reference — toggle with mod+/
 (defwidget w-keybindings []
@@ -222,8 +295,8 @@
       (label :class "kb-key"  :text "mod+h/j/k/l")
       (label :class "kb-desc" :text "focus left/down/up/right"))
     (box :class "kb-row" :orientation "h" :spacing 4
-      (label :class "kb-key"  :text "mod+shift+h/j/k/l")
-      (label :class "kb-desc" :text "move window dir"))
+      (label :class "kb-key"  :text "mod+sft+h/j/k/;")
+      (label :class "kb-desc" :text "move window left/down/up/right"))
     (box :class "kb-row" :orientation "h" :spacing 4
       (label :class "kb-key"  :text "mod+a")
       (label :class "kb-desc" :text "focus parent"))
@@ -272,14 +345,32 @@
       (label :class "kb-key"  :text "mod+return")
       (label :class "kb-desc" :text "terminal (kitty)"))
     (box :class "kb-row" :orientation "h" :spacing 4
-      (label :class "kb-key"  :text "mod+shift+return")
+      (label :class "kb-key"  :text "mod+sft+return")
       (label :class "kb-desc" :text "float terminal"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+ctrl+return")
+      (label :class "kb-desc" :text "tile B terminal"))
     (box :class "kb-row" :orientation "h" :spacing 4
       (label :class "kb-key"  :text "mod+d")
       (label :class "kb-desc" :text "launcher (wofi)"))
     (box :class "kb-row" :orientation "h" :spacing 4
-      (label :class "kb-key"  :text "mod+shift+f")
+      (label :class "kb-key"  :text "mod+sft+f")
       (label :class "kb-desc" :text "firefox"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+sft+v")
+      (label :class "kb-desc" :text "vivaldi"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+sft+t")
+      (label :class "kb-desc" :text "tor browser"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+sft+o")
+      (label :class "kb-desc" :text "opera"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+sft+c")
+      (label :class "kb-desc" :text "chromium"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+ctrl+s")
+      (label :class "kb-desc" :text "os settings"))
 
     (label :class "kb-group" :text "SYSTEM" :halign "start")
     (box :class "kb-row" :orientation "h" :spacing 4
@@ -307,7 +398,10 @@
       (label :class "kb-desc" :text "toggle this window"))
     (box :class "kb-row" :orientation "h" :spacing 4
       (label :class "kb-key"  :text "mod+shift+a")
-      (label :class "kb-desc" :text "agent chat overlay"))))
+      (label :class "kb-desc" :text "agent chat overlay"))
+    (box :class "kb-row" :orientation "h" :spacing 4
+      (label :class "kb-key"  :text "mod+shift+w")
+      (label :class "kb-desc" :text "wardrive map"))))
 
 ;; Sway nav quick-ref — compact sidebar panel
 (defwidget w-navkeys []
@@ -317,7 +411,7 @@
       (label :class "label-dim" :text "hjkl" :width 46)
       (label :class "stat-val"  :text "focus"))
     (box :class "kb-row" :orientation "h" :spacing 3
-      (label :class "label-dim" :text "sft+hjkl" :width 46)
+      (label :class "label-dim" :text "sft+hjk;" :width 46)
       (label :class "stat-val"  :text "move"))
     (box :class "kb-row" :orientation "h" :spacing 3
       (label :class "label-dim" :text "1..0" :width 46)
@@ -477,7 +571,7 @@
       (box :class "agent-card" :orientation "h" :spacing 0 :valign "center"
         (box :orientation "v" :spacing 0 :hexpand true
           (label :class "agent-card-name" :text "zeroclaw" :halign "start")
-          (label :class "agent-card-desc" :text "gemini 2.5 pro  //  free" :halign "start"))
+          (label :class "agent-card-desc" :text "openrouter free  //  llama-3.3-70b" :halign "start"))
         (button :class "agent-launch"
                 :onclick "bash ~/.config/eww/scripts/launch_agent.sh zeroclaw"
           (label :text "[open]")))
@@ -511,6 +605,8 @@
       (label :class "rf-spinner" :text rf_pulse)
       (label :class "agent-sep"  :text "  ")
       (label :class "rf-summary" :text {"w:" + wifi_count + "  " + rf_summary})
+      (label :class "agent-sep"  :text "  ")
+      (label :class "wardrive-stat-sm" :text wardrive_stats)
       (label :class "agent-sep"  :text "  ")
       (button :class "scan-rbtn"
               :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json & ~/.config/eww/scripts/rf_live.sh &"
@@ -957,6 +1053,14 @@
               :onclick "~/.config/eww/scripts/ws2_export.sh &"
         (label :text "[export]")))
 
+    ;; row 3 — wardrive map
+    (box :class "ws2-act-row" :orientation "h" :spacing 4
+      (button :class "ws2-act-btn ws2-act-wardrive" :hexpand true
+              :onclick "eww open --toggle wardrive-map"
+        (label :text "[wardrive map]"))
+      (label :class "wardrive-stat-sm" :hexpand true
+             :text wardrive_stats :halign "end"))
+
     ;; live status — rf device counts + gateway ping
     (box :class "ws2-act-status" :orientation "h" :spacing 6 :valign "center"
       (label :class "label-dim" :text "rf:")
@@ -1067,3 +1171,97 @@
   :stacking "overlay"
   :focusable true
   (w-device-labels))
+
+;; ---- WARDRIVE MAP WINDOW ----
+;; Full AP history database: scatter map, sortable list, channel stats.
+;; Open via [wardrive map] in ws2-actions or mod+shift+w keybind.
+
+(defwidget w-wardrive-map []
+  (box :class "wd-root" :orientation "v" :spacing 0
+
+    ;; ── TOP BAR ────────────────────────────────────────────────────────────
+    (box :class "wd-topbar" :orientation "h" :spacing 0 :valign "center"
+      (label :class "wd-title" :hexpand true
+             :text "[ WARDRIVE MAP ]" :halign "start")
+      (label :class "rf-spinner" :text rf_pulse)
+      (label :class "agent-sep"  :text "  ")
+      (label :class "wardrive-stat-sm" :text wardrive_stats)
+      (label :class "agent-sep"  :text "  ")
+      (button :class "scan-rbtn"
+              :onclick "~/.config/eww/scripts/wifi_scan.sh > /tmp/eww_wifi_scan.json &"
+        (label :text "[r]"))
+      (label :class "agent-sep" :text " ")
+      (button :class "wd-close"
+              :onclick "eww close wardrive-map"
+        (label :text "[x]")))
+
+    ;; ── TAB ROW ────────────────────────────────────────────────────────────
+    (box :class "wd-tabs" :orientation "h" :spacing 0
+      (button :class {wardrive_tab == "map"   ? "wd-tab wd-tab-active" : "wd-tab"}
+              :onclick "eww update wardrive_tab=map"
+        (label :text "[ map ]"))
+      (button :class {wardrive_tab == "list"  ? "wd-tab wd-tab-active" : "wd-tab"}
+              :onclick "eww update wardrive_tab=list"
+        (label :text "[ list ]"))
+      (button :class {wardrive_tab == "stats" ? "wd-tab wd-tab-active" : "wd-tab"}
+              :onclick "eww update wardrive_tab=stats"
+        (label :text "[ stats ]")))
+
+    ;; ── MAP TAB ────────────────────────────────────────────────────────────
+    (revealer :reveal {wardrive_tab == "map"} :transition "none"
+      (scroll :class "wd-scroll" :vscroll true :hscroll false :height 340
+        (label :class "wd-map-txt" :halign "start" :valign "start"
+               :wrap false :text wardrive_map_frame)))
+
+    ;; ── LIST TAB ───────────────────────────────────────────────────────────
+    (revealer :reveal {wardrive_tab == "list"} :transition "none"
+      (scroll :class "wd-scroll" :vscroll true :hscroll true :height 340
+        (label :class "wd-list-txt" :halign "start" :valign "start"
+               :wrap false :text wardrive_list_txt)))
+
+    ;; ── STATS TAB ──────────────────────────────────────────────────────────
+    (revealer :reveal {wardrive_tab == "stats"} :transition "none"
+      (scroll :class "wd-scroll" :vscroll true :hscroll false :height 340
+        (label :class "wd-stats-txt" :halign "start" :valign "start"
+               :wrap false :text wardrive_stats_txt)))
+
+    ;; ── FOCUS PANEL ────────────────────────────────────────────────────────
+    ;; shows DB record for the AP currently focused in the scan panel
+    (box :class "wd-focus-wrap" :orientation "v" :spacing 0
+      (box :class "wd-focus-hdr" :orientation "h" :spacing 3 :valign "center"
+        (label :class "wd-section" :hexpand true
+               :text "[ FOCUSED ]" :halign "start")
+        (label :class "wd-focused-key" :text scan_focused_key :limit-width 18))
+
+      (scroll :class "wd-scroll" :vscroll true :height 88
+        (label :class "wd-focus-txt" :halign "start" :valign "start"
+               :wrap false :text wardrive_focus))
+
+      ;; status action row
+      (box :class "wd-actions" :orientation "h" :spacing 3 :valign "center"
+        (label :class "wd-act-label" :text "mark:")
+        (button :class "wd-act-btn wd-known"
+                :onclick {"~/.config/eww/scripts/wardrive_status.sh '"
+                          + scan_focused_key + "' known"}
+          (label :text "[known]"))
+        (button :class "wd-act-btn wd-watched"
+                :onclick {"~/.config/eww/scripts/wardrive_status.sh '"
+                          + scan_focused_key + "' watched"}
+          (label :text "[watch]"))
+        (button :class "wd-act-btn wd-flagged"
+                :onclick {"~/.config/eww/scripts/wardrive_status.sh '"
+                          + scan_focused_key + "' flagged"}
+          (label :text "[flag]"))
+        (button :class "wd-act-btn"
+                :onclick {"~/.config/eww/scripts/wardrive_status.sh '"
+                          + scan_focused_key + "' unknown"}
+          (label :text "[unk]"))))))
+
+(defwindow wardrive-map
+  :monitor 0
+  :geometry (geometry :x "50%" :y "50%" :width "560px" :height "540px"
+                      :anchor "center")
+  :stacking "overlay"
+  :focusable true
+  :namespace "eww-wardrive"
+  (w-wardrive-map))

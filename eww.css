@@ -62,16 +62,17 @@
 
 .clock-panel {
   border-left: 2px solid #ff0000;
+  padding:     2px 6px;
 }
 
 .clock-time {
-  font-size:   16px;
+  font-size:   11px;
   color:       #ff0000;
   font-family: "Terminus", monospace;
 }
 
 .clock-date {
-  font-size: 10px;
+  font-size: 9px;
   color:     #440000;
 }
 
@@ -145,6 +146,28 @@
   min-width: 0;
   font-size: 9px;
 }
+
+/* ---- SLOT / RF TOGGLE BUTTONS ---- */
+
+/* [>] on sys header — cycle to net slot */
+.slot-cycle-btn {
+  font-size:  9px;
+  color:      #280000;
+  background: transparent;
+  border:     none;
+  padding:    0;
+}
+.slot-cycle-btn:hover { color: #880000; }
+
+/* [+]/[-] on RF header — toggle compact/detail */
+.rf-detail-toggle {
+  font-size:  9px;
+  color:      #280000;
+  background: transparent;
+  border:     none;
+  padding:    0 2px;
+}
+.rf-detail-toggle:hover { color: #880000; }
 
 /* ---- RF RADAR ENHANCED ---- */
 
@@ -1133,3 +1156,160 @@ tooltip * {
   border-color: #880000;
   color:        #ff4444;
 }
+
+/* ================================================================
+   WARDRIVE MAP WINDOW
+   ================================================================ */
+
+.wd-root {
+  background: #000000;
+  border:     2px solid #cc0000;
+}
+
+.wd-topbar {
+  background:    #050000;
+  border-bottom: 1px solid #330000;
+  padding:       3px 8px;
+  min-height:    26px;
+}
+
+.wd-title {
+  font-size:   10px;
+  color:       #ff0000;
+  letter-spacing: 0.08em;
+}
+
+.wd-close {
+  font-size:  10px;
+  color:      #660000;
+  background: transparent;
+  border:     none;
+  padding:    0 4px;
+}
+.wd-close:hover { color: #ff2200; }
+
+.wd-tabs {
+  background:    #030000;
+  border-bottom: 1px solid #330000;
+  padding:       0 4px;
+}
+
+.wd-tab {
+  font-size:  10px;
+  color:      #550000;
+  background: transparent;
+  border:     none;
+  padding:    3px 12px;
+}
+.wd-tab:hover        { color: #cc0000; }
+.wd-tab-active       { color: #ff0000; border-bottom: 2px solid #ff0000; }
+.wd-tab-active label { color: #ff0000; }
+
+.wd-scroll {
+  background: transparent;
+}
+
+.wd-map-txt {
+  font-family:    "Terminus", monospace;
+  font-size:      10px;
+  color:          #880000;
+  letter-spacing: 0;
+  padding:        4px 6px;
+  line-height:    1.15;
+}
+
+.wd-list-txt {
+  font-family:    "Terminus", monospace;
+  font-size:      9px;
+  color:          #cc0000;
+  letter-spacing: 0;
+  padding:        4px 8px;
+  line-height:    1.2;
+}
+
+.wd-stats-txt {
+  font-family:    "Terminus", monospace;
+  font-size:      10px;
+  color:          #aa0000;
+  letter-spacing: 0;
+  padding:        4px 8px;
+  line-height:    1.3;
+}
+
+.wd-focus-wrap {
+  border-top:  1px solid #330000;
+  background:  #030000;
+}
+
+.wd-focus-hdr {
+  padding:    3px 8px;
+  background: transparent;
+}
+
+.wd-section {
+  font-size:      10px;
+  color:          #ff0000;
+  letter-spacing: 0.08em;
+}
+
+.wd-focused-key {
+  font-size:  9px;
+  color:      #660000;
+}
+
+.wd-focus-txt {
+  font-family: "Terminus", monospace;
+  font-size:   9px;
+  color:       #cc0000;
+  padding:     2px 8px;
+  line-height: 1.3;
+}
+
+.wd-actions {
+  border-top: 1px solid #1a0000;
+  padding:    3px 6px;
+  background: transparent;
+}
+
+.wd-act-label {
+  font-size: 9px;
+  color:     #440000;
+  min-width: 32px;
+}
+
+.wd-act-btn {
+  font-size:  9px;
+  color:      #880000;
+  background: #080000;
+  border:     1px solid #2a0000;
+  padding:    2px 8px;
+}
+.wd-act-btn:hover   { color: #ff2200; border-color: #660000; }
+.wd-act-btn.wd-known   label { color: #00aa44; }
+.wd-act-btn.wd-watched label { color: #ddaa00; }
+.wd-act-btn.wd-flagged label { color: #ff4400; }
+.wd-act-btn.wd-known:hover   { border-color: #00aa44; }
+.wd-act-btn.wd-watched:hover { border-color: #ddaa00; }
+.wd-act-btn.wd-flagged:hover { border-color: #ff4400; }
+
+/* ---- wardrive stats compact label (in scan topbar + ws2-actions) ---- */
+
+.wardrive-stat-sm {
+  font-size: 9px;
+  color:     #440000;
+}
+
+/* ---- ws2-actions wardrive button (prominent) ---- */
+
+.ws2-act-wardrive label {
+  color: #cc4400;
+}
+.ws2-act-wardrive:hover label {
+  color: #ff6600;
+}
+
+/* ================================================================
+   SENSORS / WIFI ROW IN VITALS (HW: temp  fan  load)
+   ================================================================ */
+
+/* inherits stat-val/label-dim — no extra classes needed */

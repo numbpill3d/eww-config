@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """wifi_scan.py — nmcli wifi list → JSON array for eww defpoll"""
-import subprocess, json, re
+import subprocess, json, re, os
 
 def sig_bars(s):
     if s >= 80: return '\u2593\u2593\u2593\u2593'
@@ -68,3 +68,16 @@ for raw in r.stdout.splitlines():
 
 devices.sort(key=lambda x: -x['signal'])
 print(json.dumps(devices))
+
+# log every scan to wardrive DB (non-blocking)
+try:
+    import subprocess as _sp
+    _db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wardrive_db.py')
+    _proc = _sp.Popen(
+        ['python3', _db],
+        stdin=_sp.PIPE, stdout=_sp.DEVNULL, stderr=_sp.DEVNULL
+    )
+    _proc.stdin.write(json.dumps(devices).encode())
+    _proc.stdin.close()
+except Exception:
+    pass

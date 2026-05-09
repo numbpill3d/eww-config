@@ -5,3 +5,6 @@ logs/
 data/
 known_devices.json
 known_devices.txt
+
+scripts/__pycache__/
+*.pyc
